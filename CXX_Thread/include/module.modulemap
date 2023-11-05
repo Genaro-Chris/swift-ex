@@ -1,0 +1,5 @@
+module CXX_Thread {
+    header "thread_header.h"
+
+    export *
+}
