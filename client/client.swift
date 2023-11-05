@@ -18,7 +18,6 @@ let server = try Server.resolve(
 async let _ = SignalHandler.start(with: .SIGINT, .SIGQUIT, .SIGTSTP) { _ in
     try? await client.close(server: server)
     exit(1)
-
 }
 
 try await server.join_with_id(id: client.actorId, client)
@@ -35,7 +34,7 @@ while let input = readLine() {
                 continue
             }
             let newId = try await server.prung_id().filter { id in
-                try await id != client.actorId
+                id != client.id
             }[input]
             let newclient = try Client.resolve(
                 id: newId,
@@ -44,27 +43,31 @@ while let input = readLine() {
             print("New Client got back \(newid)")
 
         default:
-            let list = try await server.prung()
+            let list = try await server.prung_id()
                 .filter { id in
-                    try await id.description != client.actorId.description
+                    id != client.id
                 }
-            if list.count > 1 {
-                for (index, id) in list.enumerated() {
-                    debugPrint("Index \(index)", id)
+            for (index, id) in list.enumerated() {
+                debugPrint("Index \(index)", id)
+                do {
+                    let newactor = try Client.resolve(id: id, using: client.actorSystem)
+                    try await newactor.execute { id in
+                        print("About to work on the \(newactor) side")
+                        print("\(id)")
+
+                    }
+                } catch let error as HTTPActorSystemError {
+                    switch error {
+
+                        case .actorNotFound(id): print("No actor found with id \(id)")
+
+                        default: print("Other error")
+
+                    }
+                } catch {
+                    print("Failed with \(error)")
                 }
             }
     }
 
-}
-
-extension Array {
-
-    @usableFromInline
-    func filter(body: (Element) async throws -> Bool) async rethrows -> Self {
-        var newarr: Self = []
-        for item in self where try await body(item) {
-            newarr.append(item)
-        }
-        return newarr
-    }
 }

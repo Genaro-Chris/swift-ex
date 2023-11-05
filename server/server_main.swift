@@ -5,21 +5,20 @@ import SignalHandler
 enum Main {
     static func main() async throws {
         let server = try Server()
-        Task.detached {
-            try server.actorSystem.host("/Server") {
-                server
-            }
+        try server.actorSystem.host("/Server") {
+            server
         }
 
         async let _ = SignalHandler.start(with: .SIGINT, .SIGQUIT, .SIGTSTP) { _ in
             let clients = try? await server.allClients()
             for id in clients! {
                 let item = try? Client.resolve(id: id, using: server.actorSystem)
+                try? await server.remove_with_id(id: id)
                 try? await item?.execute { id in
                     Task {
                         try await print("Port: \(item?.port ?? 0)")
+                        print("\(id) disconnected")
                     }
-                    print("\(id) disconnected")
                 }
             }
             exit(1)

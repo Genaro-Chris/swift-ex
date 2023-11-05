@@ -15,7 +15,7 @@ public distributed actor Client: SpecialActor {
     }
 
     public init() throws {
-        self.actorSystem = try HTTPActorSystem(host: "localhost", port: _port, group: .singletonMultiThreadedEventLoopGroup)
+        self.actorSystem = try HTTPActorSystem(host: "localhost", port: _port, group: .singletonMultiThreadedEventLoopGroup, logLevel: .critical)
     }
 
     public distributed func print_id() -> ID {

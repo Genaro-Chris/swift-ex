@@ -77,10 +77,10 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(path: "/home/genaro/Downloads/SignalHandler"),
         .package(url: "https://github.com/apple/swift-log.git", branch: "main"),
         .package(url: "https://github.com/apple/swift-nio.git", branch: "main"),
         .package(url: "https://github.com/swift-server/async-http-client.git", branch: "main"),
+        .package(url: "https://github.com/Genaro-Chris/SignalHandler", branch: "main")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.

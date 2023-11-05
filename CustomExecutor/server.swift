@@ -23,12 +23,6 @@ public distributed actor Server: ServerActor {
 
     fileprivate var clients: [HTTPActorSystem.ActorID: any SpecialActor] = [:]
 
-    public distributed func prung() async -> [String] {
-        return self.clients.keys.reduce(into: []) { acc, x in
-            acc.append(x.description)
-        }
-    }
-
     public distributed func prung_id() async -> [ID] {
         return self.clients.keys.reduce(into: []) { acc, x in
             acc.append(x)
@@ -37,7 +31,7 @@ public distributed actor Server: ServerActor {
 
     public init() throws {
         self.actorSystem = try HTTPActorSystem(
-            host: "localhost", port: 80, group: .init(numberOfThreads: 8), logLevel: .info)
+            host: "localhost", port: 80, group: .init(numberOfThreads: 8), logLevel: .critical)
     }
 
     public nonisolated var unownedExecutor: UnownedSerialExecutor {
@@ -47,8 +41,13 @@ public distributed actor Server: ServerActor {
     public distributed func join_with_id<T: SpecialActor>(
         id: T.ID, _ with: T? = nil
     ) throws where T.ActorSystem == HTTPActorSystem, T.ActorSystem == HTTPActorSystem {
-        let actor = try T.resolve(id: .random(host: id.host, port: id.port, path: id.path), using: self.actorSystem)
-        self.clients.updateValue(actor, forKey: id)
+        guard let with else {
+            let actor = try T.resolve(
+                id: .random(host: id.host, port: id.port, path: id.path), using: self.actorSystem)
+            self.clients.updateValue(actor, forKey: id)
+            return
+        }
+        self.clients.updateValue(with, forKey: id)
     }
 }
 

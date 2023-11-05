@@ -2,7 +2,7 @@ import Foundation
 import Distributed
 import NIO
 
-enum HTTPActorSystemError: DistributedActorSystemError {
+public enum HTTPActorSystemError: DistributedActorSystemError {
   // Resolve errors
   case actorNotFound(HTTPActorSystem.ActorID)
 
