@@ -3,6 +3,7 @@ import CustomExecutor
 import SwiftWithCXX
 import CXX_Thread
 import cxxLibrary
+import Interface
 
 print("Multithreaded \(Thread.isMultiThreaded())")
 @_marker 
@@ -12,11 +13,11 @@ protocol Send {}
     print("GenerateBindingsForThrowingFunctionsInCXX exists in this compiler")
 #endif
 
-#if hasFeature(TypedThrows)
+#if $TypedThrows
     enum NewError: Error {
         case oops
     }
-    func throwing_func() throws{ //(NewError) -> Void {
+    func throwing_func() throws { //(NewError) -> Void {
         throw NewError.Oops
     }
     print("Typed Throws")
@@ -28,6 +29,11 @@ protocol Send {}
     }
 #endif
 
+let pool = ThreadPool.create()
+
+debugPrint(pool)
+
+dump(pool)
 
 struct V<each T> {}
 
@@ -191,6 +197,7 @@ struct Ex: CustomStringConvertible {
     }
 }
 
+@CustomCodable
 struct PersonDetail: CustomStringConvertible {
     var description: String {
         self.details.description
@@ -274,6 +281,7 @@ public actor CustomActor {
 
 extension NonCopyWithGen where T == Int {}
 
+@throwsToResult("throwing")
 func closure(_ c: () async throws -> Void) async rethrows {
     let thread = CXX_Thread.create {
         print(Thread.current.name as Any)
@@ -299,7 +307,7 @@ extension TaskPriority: CaseIterable {
     }    
 }
 
-await withDiscardingTaskGroup {group in 
+/* await withDiscardingTaskGroup {group in 
     let actor = CustomActor()
     for priority in TaskPriority.allCases {
         group.addTask(priority: priority, value: actor) { val in
@@ -310,7 +318,7 @@ await withDiscardingTaskGroup {group in
             await val.example()
         }
     }
-}
+} */
 
 
 @_eagerMove
@@ -355,6 +363,13 @@ let newStr: std.string = "Are you sure?"
 
 usesConcept(newStr)
 
+do {
+    var value = 123.5
+   let val = special_move(&value)
+   print(val.pointee)
+    //_ = consume value
+}
+
 let new_val = special_move(&user)
 
 var specialValue = SpecialType()
@@ -369,7 +384,7 @@ print("About to use moved value")
 
 print(user, specialValue)
 
-//print(new_val.pointee, new_val1.pointee)
+print(new_val.pointee, new_val1.pointee)
 
 print("Done using moved value")
 
@@ -450,11 +465,11 @@ func consumer(_ instance: consuming MoveOnly) {
 }
 
 func sharing(_ instance: __shared Moved) {
-     print("Printing consumed \(instance.name)")
+     print("Printing shared \(instance.name)")
 }
 
 func owned(_ instance: __owned Moved) {
-     print("Printing consumed \(instance.name)")
+     print("Printing owned \(instance.name)")
 }
 
 @CustomActor 

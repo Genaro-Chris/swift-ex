@@ -1,6 +1,7 @@
 // swift-tools-version: 5.9.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
+import CompilerPluginSupport
 import Foundation
 import PackageDescription
 
@@ -25,7 +26,9 @@ func tryGuessSwiftLibRoot() -> String {
 
 let package = Package(
     name: "swift-ex",
-
+    platforms: [
+        .macOS(.v10_14)
+    ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
@@ -80,12 +83,24 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", branch: "main"),
         .package(url: "https://github.com/apple/swift-nio.git", branch: "main"),
         .package(url: "https://github.com/swift-server/async-http-client.git", branch: "main"),
-        .package(url: "https://github.com/Genaro-Chris/SignalHandler", branch: "main")
+        .package(url: "https://github.com/Genaro-Chris/SignalHandler", branch: "main"),
+        .package(url: "https://github.com/apple/swift-syntax.git", branch: "main"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         // Macro implementation that performs the source transformation of a macro.
+        .macro(
+            name: "Implementation",
+            dependencies: [
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+                .product(name: "SwiftDiagnostics", package: "swift-syntax"),
+            ],
+            path: "Implementation"
+        ),
+
+        .target(name: "Interface", dependencies: ["Implementation"], path: "Interface"),
 
         .target(
             name: "CustomExecutor",
@@ -136,6 +151,7 @@ let package = Package(
                 "SwiftLib",
                 "cxxLibrary",
                 "CustomExecutor",
+                "Interface",
             ],
             swiftSettings: [
                 .interoperabilityMode(.Cxx),
@@ -173,7 +189,10 @@ let package = Package(
 
         .target(
             name: "cxxLibrary", path: "cxxLibrary",
-            exclude: ["cxxLibrary.h", "omegaException.cpp"],
+            exclude: [
+                "cxxLibraryImpl.cpp", "include/", /* "cxxLibrary.h", */ "omegaException.cpp",
+            ],
+            publicHeadersPath: "headers/",
             cxxSettings: [
                 .unsafeFlags([
                     "-I", tryGuessSwiftLibRoot(),
@@ -181,7 +200,7 @@ let package = Package(
             ],
             swiftSettings: [
                 .unsafeFlags([
-                    "-I", tryGuessSwiftLibRoot(),
+                    "-enable-experimental-move-only"
                 ])
             ]),
 

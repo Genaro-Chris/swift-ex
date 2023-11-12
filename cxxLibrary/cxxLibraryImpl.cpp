@@ -3,6 +3,7 @@
 #include <iostream>
 #include <random>
 #include <functional>
+#include <any>
 #include <string>
 #include "swift/bridging"
 using namespace std;
@@ -29,13 +30,15 @@ template <typename T>
 void usesConcept(const T &value)
 {
     value.Print("Inside func");
+    usesConcept(value);
 }
 
 template <typename T>
     requires integral<T>
 void usesConcept(const T &value)
 {
-    cout << "uses concept integral " << value << endl;
+    cout << "uses concept integral" << endl;
+    usesConcept<decltype(value)>(value);
 }
 
 string returns_string()
@@ -77,6 +80,8 @@ void ex()
     usesOnlyConcept(user);
     auto type = SpecialType();
     special_move(type);
+    double val = 1;
+    special_move<double>(val);
 }
 
 const char *cxx_impl_exception::what() const noexcept
@@ -128,6 +133,14 @@ T &&special_move(T &x) noexcept
     auto type_name = typeid(x).name();
     cout << "About to move value of type" << type_name << endl;
     return static_cast<T &&>(x);
+}
+
+
+template <>
+any &&special_move(any &x) noexcept
+{
+    cout << "Called with any type" << endl;
+    return special_move<any>(x);
 }
 
 /*

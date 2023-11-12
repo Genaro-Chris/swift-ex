@@ -75,3 +75,25 @@ inline void release(Thread *_Nonnull ref)
 {
     ref->delref();
 }
+
+struct ThreadPool : NonCopyable, ReferenceCounted<ThreadPool>
+{
+private:
+    uint value;
+
+public:
+    static auto create() -> ThreadPool *_Nonnull
+    {
+        return new ThreadPool();
+    }
+} SWIFT_SHARED_REFERENCE(retain_pool, release_pool);
+
+inline void retain_pool(ThreadPool *_Nonnull ref)
+{
+    ref->addref();
+}
+
+inline void release_pool(ThreadPool *_Nonnull ref)
+{
+    ref->delref();
+}

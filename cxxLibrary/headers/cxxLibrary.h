@@ -4,16 +4,9 @@
 #include <random>
 #include <functional>
 #include <string>
-#include <swift/bridging>
+// #include <swift/bridging>
 
 using namespace std;
-
-inline void hello_world(string msg)
-{
-    cout << msg << endl;
-}
-
-string returns_string();
 
 template <typename T>
 concept CxxExampleConcept = requires(const T &ex) {
@@ -27,7 +20,6 @@ void usesConcept(const T &value)
 {
     auto type_name = typeid(value).name();
     cout << "Called usesConcept function with instance of type " << type_name << endl;
-    // cout << value << endl;
 }
 
 struct ConceptUser
@@ -56,7 +48,14 @@ inline string returns_string()
     return "String from c++ land";
 }
 
+inline void hello_world(string msg)
+{
+    cout << msg << endl;
+}
+
 using CBT = void (*)();
+
+class cxx_impl_exception;
 
 class cxx_impl_exception
 {
@@ -73,6 +72,7 @@ public:
     {
         cout << this->Msg << endl;
     }
+
     virtual const char *what() const noexcept
     {
         return this->Msg.c_str();
@@ -159,10 +159,61 @@ inline auto createUniformPseudoRandomNumberGenerator(double min, double max) -> 
 /// Like the std::move function do, all this function do
 /// is to convert a lvalue parameter into a rvalue return type
 template <typename T>
-T &&special_move(T &x) noexcept
+inline T &&special_move(T &x) noexcept
 {
     string prefix = "type11 ";
     auto type_name = typeid(x).name();
     cout << "About to move value of type" << type_name << endl;
     return static_cast<T &&>(x);
 }
+
+class CopyOnlyType
+{
+public:
+    CopyOnlyType() : m_value{1} {}                             // Default constructor
+    CopyOnlyType(int m_value) : m_value{m_value} {}            // constructor
+    CopyOnlyType(const CopyOnlyType &sp) : m_value{sp.m_value} // Copy constructor
+    {
+        cout << "this copy cstor called" << endl;
+    }
+
+    CopyOnlyType(CopyOnlyType &&sp) noexcept = delete; // Move constructor
+    ~CopyOnlyType()                                    // Destructor (implicitly noexcept)
+    {
+        cout << "this destructor" << endl;
+    }
+    CopyOnlyType &operator=(const CopyOnlyType &sp) // Copy assignment operator
+    {
+        m_value = sp.m_value;
+        return *this;
+    }
+    CopyOnlyType &operator=(CopyOnlyType &&sp) noexcept = delete; // Move assignment operator
+
+private:
+    int m_value;
+};
+
+class MoveOnlyType
+{
+public:
+    MoveOnlyType() : m_value{1} {}                                            // Default constructor
+    MoveOnlyType(int m_value) : m_value{m_value} {}                           // constructor
+    MoveOnlyType(const MoveOnlyType &sp) = delete;                            // Copy constructor
+    MoveOnlyType(MoveOnlyType &&sp) noexcept : m_value{std::move(sp.m_value)} // Move constructor
+    {
+        cout << "this move cstor called" << endl;
+    }
+    ~MoveOnlyType() // Destructor (implicitly noexcept)
+    {
+        cout << "this destructor" << endl;
+    }
+    MoveOnlyType &operator=(const MoveOnlyType &sp) = delete; // Copy assignment operator
+    MoveOnlyType &operator=(MoveOnlyType &&sp) noexcept       // Move assignment operator
+    {
+        m_value = std::move(sp.m_value);
+        return *this;
+    }
+
+private:
+    int m_value;
+};
