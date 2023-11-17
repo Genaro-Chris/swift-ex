@@ -1,8 +1,19 @@
 #include "thread_pool.h"
 #include <iostream>
 #include <sstream>
-/* #include <algorithm>
-#include <utility> */
+// #include <algorithm>
+#include <variant>
+#include <variant>
+#include <utility>
+
+template <class... Ts>
+struct overloaded : Ts...
+{
+    using Ts::operator()...;
+};
+
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 auto make_thread_handler(TaskQueue &queue)
 {
@@ -115,7 +126,15 @@ auto make_thread_handler_for_single(TaskQueue &queue, SingleThreadedPool &pool)
                                switch (element.type)
                                {
                                case TaskType::Execute:
-
+                                   visit(overloaded{
+                                             // int, double, float, string, void (*_Nonnull)(void const *_Nonnull value), monostate
+                                             [](int) {},
+                                             [](double) {},
+                                             [](void (*_Nonnull)(void const *_Nonnull value)) {},
+                                             [](monostate) {},
+                                             [](string) {}
+                                         },
+                                         element.arguments[0]);
                                    switch (pool.getDone())
                                    {
                                    case DoneType::First:
