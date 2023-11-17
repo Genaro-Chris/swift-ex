@@ -1,5 +1,8 @@
 module CXX_Thread {
     header "thread_header.h"
-
+    header "thread_pool.h"
+    //header "threadqueue.h"
+    header "swift_concurrency_hook.h"
+    
     export *
 }

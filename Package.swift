@@ -190,9 +190,9 @@ let package = Package(
         .target(
             name: "cxxLibrary", path: "cxxLibrary",
             exclude: [
-                "cxxLibraryImpl.cpp", "include/", /* "cxxLibrary.h", */ "omegaException.cpp",
+                /* "cxxLibraryImpl.cpp", "include/", */ "headers/", "omegaException.cpp",
             ],
-            publicHeadersPath: "headers/",
+            //publicHeadersPath: "headers/",
             cxxSettings: [
                 .unsafeFlags([
                     "-I", tryGuessSwiftLibRoot(),
@@ -219,7 +219,12 @@ let package = Package(
 
         .target(
             name: "CXX_Thread",
-            dependencies: [], path: "CXX_Thread"),
+            dependencies: [], path: "CXX_Thread",
+            swiftSettings: [
+                .unsafeFlags([
+                    "-std=c++23"
+                ])
+            ]),
 
         // A test target used to develop the macro implementation.
     ],

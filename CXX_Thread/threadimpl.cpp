@@ -2,8 +2,6 @@
 #include "stdlib.h"
 #include "vector"
 
-
-
 using namespace std;
 
 uint zeroed()
@@ -55,8 +53,8 @@ Thread *_Nonnull Thread::create(FuncPtr _Nonnull with)
 }
 
 void Thread::run(void(callback)(void const *value), void const *value)
-{   
-    //this->detach();
+{
+    // this->detach();
     auto new_thread = std::thread(callback, value);
     this->my_thread.swap(new_thread);
 }
@@ -64,13 +62,11 @@ void Thread::run(void(callback)(void const *value), void const *value)
 void Thread::Run(void(callback)(void const *value, void const *newValue), void const *value, void const *newValue)
 {
     std::thread(callback, value, newValue).join();
-    
 }
 
 void Thread::RunOnce(void(callback)(void const *value), void const *value)
 {
     std::thread(callback, value).join();
-    
 }
 
 void Thread::swap_with(FuncPtr _Nonnull with)

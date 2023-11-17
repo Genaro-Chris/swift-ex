@@ -1,12 +1,51 @@
-import Foundation
-import CustomExecutor
-import SwiftWithCXX
 import CXX_Thread
-import cxxLibrary
+import CustomExecutor
+import Foundation
 import Interface
+import SwiftWithCXX
+import cxxLibrary
+
+extension Thread {
+    var id: String {
+        String(getThreadID())
+    }
+}
+
+
+do {
+    typealias OpaqueJob = UnsafeMutableRawPointer
+    typealias EnqueueOriginal = @convention(c) (OpaqueJob) -> Void
+    typealias EnqueueHook = @convention(c) (OpaqueJob, EnqueueOriginal) -> Void
+
+    let handle = dlopen(nil, 0)
+    let enqueueGlobal_hook_ptr = dlsym(handle, "swift_task_enqueueGlobal_hook")!
+        .assumingMemoryBound(to: EnqueueHook.self)
+
+    enqueueGlobal_hook_ptr.pointee = { opaque_job, original in
+        //print("simple example succeeded")
+        //original(opaque_job)
+
+        // In real implementation, move job to your workloop
+        // and eventually run:
+
+        let job = unsafeBitCast(opaque_job, to: UnownedJob.self)
+        //CustomGlobalExecutor.shared.enqueue(job)
+        job.runSynchronously(on: .generic)
+    }
+}
+
+Task.detached {
+    //exit(0)
+    print("Example task detached")
+}
+
+try await Task.sleep(for: .seconds(2))
+
+//dispatchMain()
+
 
 print("Multithreaded \(Thread.isMultiThreaded())")
-@_marker 
+@_marker
 protocol Send {}
 
 #if hasFeature(GenerateBindingsForThrowingFunctionsInCXX)
@@ -29,11 +68,17 @@ protocol Send {}
     }
 #endif
 
-let pool = ThreadPool.create()
+do {
+    let pool = ThreadPool.create(CPU_Count)
+    for _ in 1...20 {
+        pool.submit {
+            print("ThreadPool \(Thread.current.name ?? "Unknown") with id \(Thread.current.id) and description \(Thread.current.description)")
+        }
+    }
+    Thread.sleep(forTimeInterval: 4)
+}
 
-debugPrint(pool)
 
-dump(pool)
 
 struct V<each T> {}
 
@@ -78,7 +123,7 @@ class SingleBox<Boxed> {
     init(_ single: Boxed) {
         self.boxed = single
     }
-    
+
 }
 
 /* @propertyWrapper
@@ -152,7 +197,7 @@ struct CopyOnWrite<each Value> {
 struct CoW<T>{
     fileprivate var box: SingleBox<T>
     var wrappedValue: T {
-        get {    
+        get {
             return box.boxed
         }
         set {
@@ -189,9 +234,9 @@ struct CoW<T>{
 }
 
 struct Ex: CustomStringConvertible {
-    var age: UInt = 0 
+    var age: UInt = 0
     var name: String = ""
-    
+
     var description: String {
         "Ex(age: \(age), name: \(name))"
     }
@@ -239,7 +284,7 @@ if let person1, let person2 {
     print("Person1 \(person1)")
 
     print("Person2 \(person2)")
-}   
+}
 
 
 let ex:  NonCopyWithGen<UInt> = NonCopyWithGen(item: 23)
@@ -260,7 +305,7 @@ extension DispatchQueue: SerialExecutor, @unchecked Sendable {
     }
 }
 
-@globalActor 
+@globalActor
 public actor CustomActor {
 
     static public let shared = CustomActor()
@@ -273,8 +318,21 @@ public actor CustomActor {
     func example() async {
         print("Fib 5 \(SwiftWithCXX.CXX_STRUCT(true).fibonacci(5))")
         print(
-            "CustomActor instance Thread \(Thread.current.name ?? "main") \(Thread.current.qualityOfService) executed \(Thread.current.isMainThread)"
-        )
+            "CustomActor instance Thread \(Thread.current.name ?? "main") \(Thread.current.qualityOfService) executed \(Thread.current.isMainThread)\n")
+            print("Executing \(Thread.current.description) with id \(Thread.current.id)")
+    }
+}
+
+actor NewActor {
+    nonisolated public var unownedExecutor: UnownedSerialExecutor  { CustomExecutor.sharedDistributedUnownedExecutor }
+    private var counter_ = 0
+    var counter: Int {
+        get {
+            counter_
+        }
+    }
+    func append(value: Int) {
+        counter_ += value
     }
 }
 
@@ -282,6 +340,7 @@ public actor CustomActor {
 extension NonCopyWithGen where T == Int {}
 
 @throwsToResult("throwing")
+@Sendable
 func closure(_ c: () async throws -> Void) async rethrows {
     let thread = CXX_Thread.create {
         print(Thread.current.name as Any)
@@ -304,26 +363,30 @@ func closure(_ c: () async throws -> Void) async rethrows {
 extension TaskPriority: CaseIterable {
     public static var allCases: [TaskPriority] {
         [.low, .medium, .high, .utility, .userInitiated, .background]
-    }    
+    }
 }
 
-/* await withDiscardingTaskGroup {group in 
+let new = NewActor()
+await withDiscardingTaskGroup {group in
     let actor = CustomActor()
     for priority in TaskPriority.allCases {
-        group.addTask(priority: priority, value: actor) { val in
-            Task { //@CustomActor in
+        group.addTask(priority: priority) { 
+            Task { @CustomActor in
                 print("Task with Custom Actor context")
-                
+                await new.append(value: 1)
             }
-            await val.example()
+            await new.append(value: 1)
+            await actor.example()
         }
     }
-} */
+}
+
+print("After \(await new.counter)")
 
 
 @_eagerMove
 let resultInt = if Bool.random() {
-    print("Then statement") 
+    print("Then statement")
     then 0
 } else {
     print("Then")
@@ -336,7 +399,7 @@ let resultInt = if Bool.random() {
     /* if !Bool.random() {
         throw  cxx_impl_exception.init("cxx_exception")
     } */
-#else 
+#else
     extension cxx_impl_exception: Error, @unchecked Sendable {}
 #endif
 
@@ -388,7 +451,7 @@ print(new_val.pointee, new_val1.pointee)
 
 print("Done using moved value")
 
-try await closure { 
+try await closure {
     try await Task.sleep(for: .seconds(5))
     print("Closure")
 }
@@ -414,7 +477,7 @@ struct MoveOnly: ~Copyable {
 func play() {
 
 
-    @_noImplicitCopy // same as consume 
+    @_noImplicitCopy // same as consume
     let str = ""
 
     //let new_str = str
@@ -472,7 +535,7 @@ func owned(_ instance: __owned Moved) {
      print("Printing owned \(instance.name)")
 }
 
-@CustomActor 
+@CustomActor
 struct Person {
     var name: String
     var age: UInt
@@ -487,4 +550,3 @@ let adam = Person(name: "Adam", age: 25)
 
 print("Adam \(adam)")
 let moved = ExPerson()
-
