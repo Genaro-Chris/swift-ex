@@ -23,14 +23,14 @@ do {
 
     enqueueGlobal_hook_ptr.pointee = { opaque_job, original in
         //print("simple example succeeded")
-        //original(opaque_job)
+        original(opaque_job)
 
         // In real implementation, move job to your workloop
         // and eventually run:
 
-        let job = unsafeBitCast(opaque_job, to: UnownedJob.self)
+        //let job = unsafeBitCast(opaque_job, to: UnownedJob.self)
         //CustomGlobalExecutor.shared.enqueue(job)
-        job.runSynchronously(on: .generic)
+        //job.runSynchronously(on: .generic)
     }
 }
 
