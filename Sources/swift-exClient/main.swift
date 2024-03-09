@@ -14,28 +14,29 @@ extension Thread {
     }
 }
 
+enum Program {
+    static func main() async throws {
+        do {
+            typealias OpaqueJob = UnsafeMutableRawPointer
+            typealias EnqueueOriginal = @convention(c) (OpaqueJob) -> Void
+            typealias EnqueueHook = @convention(c) (OpaqueJob, EnqueueOriginal) -> Void
 
-do {
-    typealias OpaqueJob = UnsafeMutableRawPointer
-    typealias EnqueueOriginal = @convention(c) (OpaqueJob) -> Void
-    typealias EnqueueHook = @convention(c) (OpaqueJob, EnqueueOriginal) -> Void
+            let handle = dlopen(nil, 0)
+            let enqueueGlobal_hook_ptr = dlsym(handle, "swift_task_enqueueGlobal_hook")!
+                .assumingMemoryBound(to: EnqueueHook.self)
 
-    let handle = dlopen(nil, 0)
-    let enqueueGlobal_hook_ptr = dlsym(handle, "swift_task_enqueueGlobal_hook")!
-        .assumingMemoryBound(to: EnqueueHook.self)
+            enqueueGlobal_hook_ptr.pointee = { opaque_job, original in
+                //print("simple example succeeded")
+                //original(opaque_job)
 
-    enqueueGlobal_hook_ptr.pointee = { opaque_job, original in
-        //print("simple example succeeded")
-        //original(opaque_job)
+                // In real implementation, move job to your workloop
+                // and eventually run:
 
-        // In real implementation, move job to your workloop
-        // and eventually run:
-
-        let job = unsafeBitCast(opaque_job, to: UnownedJob.self)
-        //CustomGlobalExecutor.shared.enqueue(job)
-        job.runSynchronously(on: .generic)
-    }
-}
+                let job = unsafeBitCast(opaque_job, to: UnownedJob.self)
+                //CustomGlobalExecutor.shared.enqueue(job)
+                job.runSynchronously(on: .generic)
+            }
+        }
 
         Task.detached {
             //exit(0)
