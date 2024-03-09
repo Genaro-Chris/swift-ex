@@ -1,68 +1,11 @@
-import CXX_Thread
-@_exported import Distributed
-import DistributedHTTPActorSystem
-import Foundation
-
-extension ThreadPool {
-    consuming func stopAllWork() {
-        self.stop()
-    }
-}
-
-extension SingleThreadedPool {
-    consuming func stopAllWork() {
-        self.stop()
-    }
-}
-
-public final class CustomGlobalExecutor: SerialExecutor {
-
-    public let customQueue = ThreadPool.create(CPU_Count)
-
-    public func enqueue(_ job: consuming ExecutorJob) {
-        var job = UnownedJob(job)
-        /* withUnsafePointer(to: CustomGlobalExecutor.sharedUnownedExecutor) { pointer in
-           customQueue.submitTaskWithExecutor(&job, pointer, handler_global_exe(_:_:))
-        } */
-        CXX_Thread.RunOnce(handler_global(_:), &job)
-    }
-
-    public func asUnownedSerialExecutor() -> UnownedSerialExecutor {
-        UnownedSerialExecutor(ordinary: self)
-    }
-
-    deinit {
-        customQueue.stopAllWork()
-    }
-}
-
-extension CustomGlobalExecutor {
-
-    public static let shared: CustomGlobalExecutor = .init()
-
-    public static var sharedUnownedExecutor: UnownedSerialExecutor {
-        UnownedSerialExecutor(ordinary: shared)
-    }
-
-}
-
-extension UnownedSerialExecutor {
-    public static var generic: Self {
-        CustomGlobalExecutor.sharedUnownedExecutor
-        //unsafeBitCast((0, 0), to: self)
-    }
-}
-
-extension TaskType: CaseIterable {
-    public static var allCases: [TaskType] {
-        [.Execute, .Stop]
-    }
-}
-
-let task = Task_.init(type: .Execute, task: .init(), arguments: .init(.init()))
+/* import CXX_Thread
 
 /// Example of a custom Executor of an actor
-public final class CustomExecutor: SerialExecutor {
+public final class CustomExecutor: SerialExecutor, @unchecked Sendable {
+
+    @_hasStorage private var jobQueue: JobQueue<UnownedJob> {
+        JobQueue()
+    }
 
     enum ExecutorKind {
         case distributedKind, normalKind
@@ -70,26 +13,35 @@ public final class CustomExecutor: SerialExecutor {
 
     init(kind: ExecutorKind) {
         self.kind = kind
+        jobQueue = JobQueue()
     }
 
     let kind: ExecutorKind
 
-    let customQueue = SingleThreadedPool.create()
+    let threadHandle = SingleThread.create()
 
     public func enqueue(_ job: consuming ExecutorJob) {
-        var job = UnownedJob(job)
-        var kind = kind
-        customQueue.submitTaskWithExecutor(&job, &kind) { job, kind in
-            let job = job.load(as: UnownedJob.self)
-            let kind = kind.load(as: CustomExecutor.ExecutorKind.self)
-            let executor =
-                switch kind {
-                    case .distributedKind:
-                        CustomExecutor.sharedDistributedUnownedExecutor
-                    case .normalKind:
-                        CustomExecutor.sharedUnownedExecutor
+        jobQueue <- UnownedJob(job)
+        switch kind {
+            case .distributedKind:
+                var executor = CustomExecutor.sharedDistributedUnownedExecutor
+
+                // warning: forming 'UnsafeRawPointer' to a variable of type 'JobQueue'; this is likely incorrect because 'JobQueue' may contain an object reference
+                // threadHandle.submitTaskWithExecutor(&executor, &jobQueue, helper(_:_:))
+                // proposed solutuon
+                withUnsafeMutableBytes(of: &jobQueue) { rawPtr in
+                    threadHandle.submitTaskWithExecutor(
+                        &executor, rawPtr.baseAddress!, helper(_:_:))
                 }
-            job.runSynchronously(on: executor)
+            case .normalKind:
+                var executor = CustomExecutor.sharedUnownedExecutor
+                // warning: forming 'UnsafeRawPointer' to a variable of type 'JobQueue'; this is likely incorrect because 'JobQueue' may contain an object reference
+                //threadHandle.submitTaskWithExecutor(&executor, &jobQueue, helper(_:_:))
+                //proposed solution
+                withUnsafeMutableBytes(of: &jobQueue) { rawPtr in
+                    threadHandle.submitTaskWithExecutor(
+                        &executor, rawPtr.baseAddress!, helper(_:_:))
+                }
         }
     }
 
@@ -98,24 +50,38 @@ public final class CustomExecutor: SerialExecutor {
     }
 }
 
-public func handler_global_exe(_ job: UnsafeRawPointer, _ executor: UnsafeRawPointer) {
-    let job = job.load(as: UnownedJob.self)
-    let executor = executor.load(as: UnownedSerialExecutor.self)
-    job.runSynchronously(on: executor)
-}
-
-private func handler_global(_ job: UnsafeRawPointer) {
-    let job = job.load(as: UnownedJob.self)
-
-    job.runSynchronously(on: CustomGlobalExecutor.sharedUnownedExecutor)
-}
-
 extension CustomExecutor {
 
-    fileprivate static let sharedDistributed: CustomExecutor = .init(
-        kind: ExecutorKind.distributedKind)
+    fileprivate static var sharedDistributed: CustomExecutor =
+        .init(
+            kind: .distributedKind)
 
-    fileprivate static let shared: CustomExecutor = .init(kind: ExecutorKind.normalKind)
+    fileprivate static var shared: CustomExecutor = .init(kind: .normalKind)
+
+    public static let sharedUnownedExecutor: UnownedSerialExecutor =
+        shared.asUnownedSerialExecutor()
+
+    public static let sharedDistributedUnownedExecutor: UnownedSerialExecutor =
+        sharedDistributed.asUnownedSerialExecutor()
+
+}
+
+extension UnownedSerialExecutor {
+
+    static let sharedSample: SampleFIFOCustomExecutor = .init()
+
+    public static var sharedSampleExecutor: UnownedSerialExecutor {
+        UnownedSerialExecutor(ordinary: sharedSample)
+    }
+}
+
+extension UnownedSerialExecutor {
+
+    fileprivate static var sharedDistributed: CustomExecutor =
+        .init(
+            kind: .distributedKind)
+
+    fileprivate static var shared: CustomExecutor = .init(kind: .normalKind)
 
     public static var sharedUnownedExecutor: UnownedSerialExecutor {
         UnownedSerialExecutor(ordinary: shared)
@@ -124,42 +90,140 @@ extension CustomExecutor {
     public static var sharedDistributedUnownedExecutor: UnownedSerialExecutor {
         UnownedSerialExecutor(ordinary: sharedDistributed)
     }
+
 }
 
-@dynamicMemberLookup
-public protocol SpecialActor: DistributedActor, Codable {
-    subscript<T>(dynamicMember member: ReferenceWritableKeyPath<Self, T>) -> T { get set }
-}
+public final class SampleFIFOCustomExecutor: SerialExecutor {
+    public func asUnownedSerialExecutor() -> UnownedSerialExecutor {
+        UnownedSerialExecutor(ordinary: self)
+    }
 
-extension SpecialActor {
-    public subscript<T>(dynamicMember member: ReferenceWritableKeyPath<Self, T>) -> T {
-        get {
-            print("Called get")
-            return self[keyPath: member]
-        }
-        set {
-            print("Called set")
-            self[keyPath: member] = newValue
-        }
-        _modify {
-            print("Called modify and about to yield")
-            yield &self[keyPath: member]
-            print("Yielded already")
+    private let threadHandle = SingleThread.create()
 
+    public func enqueue(_ job: consuming ExecutorJob) {
+        let job = UnownedJob(job)
+        let byteCount =
+            MemoryLayout<UnownedJob>.alignment * MemoryLayout<UnownedJob>.stride
+        let pointer = UnsafeMutableRawPointer.allocate(
+            byteCount: byteCount, alignment: MemoryLayout<UnownedJob>.alignment)
+        pointer.storeBytes(of: job, as: UnownedJob.self)
+        threadHandle.submit(pointer) { jobptr in
+            defer {
+                jobptr.deallocate()
+            }
+            let job = jobptr.load(as: UnownedJob.self)
+            job.runSynchronously(on: .sharedSampleExecutor)
         }
     }
 
-    public distributed func health_check() {
-        print("Health check for \(self.id)")
+} */
+
+import CXX_Thread
+
+/// Example of a custom Executor of an actor
+public final class CustomExecutor: SerialExecutor, @unchecked Sendable {
+
+    @_hasStorage private var jobQueue: JobQueue<UnownedJob> {
+        JobQueue()
     }
 
-    public distributed func execute(body: (ID) -> Void) {
-        body(self.id)
+    enum ExecutorKind {
+        case distributedKind, normalKind
+    }
+
+    init(kind: ExecutorKind) {
+        self.kind = kind
+        jobQueue = JobQueue()
+    }
+
+    let kind: ExecutorKind
+
+    let threadHandle = SingleThread.create()
+
+    public func enqueue(_ job: consuming ExecutorJob) {
+        jobQueue <- UnownedJob(job)
+        switch kind {
+            case .distributedKind:
+                var executor = UnownedSerialExecutor.sharedDistributedUnownedExecutor
+                // warning: forming 'UnsafeRawPointer' to a variable of type 'JobQueue'; this is likely incorrect because 'JobQueue' may contain an object reference
+                //threadHandle.submitTaskWithExecutor(&executor, &jobQueue, helper(_:_:))
+                // solutuon
+                // also withUnsafe[Mutable]Pointer(to:), withUnsafeBytes(of:)
+                withUnsafeMutableBytes(of: &jobQueue) { rawPtr in
+                    threadHandle.submitTaskWithExecutor(
+                        &executor, rawPtr.baseAddress!, helper(_:_:))
+                }
+
+            case .normalKind:
+                // warning: forming 'UnsafeRawPointer' to a variable of type 'JobQueue'; this is likely incorrect because 'JobQueue' may contain an object reference
+                //threadHandle.submitTaskWithExecutor(&executor, &jobQueue, helper(_:_:))
+                // solutuon
+                // also withUnsafe[Mutable]Pointer(to:), withUnsafeBytes(of:)
+                withUnsafeMutableBytes(of: &jobQueue) { rawPtr in
+                    threadHandle.submit(
+                        rawPtr.baseAddress!
+                    ) { jobPtr in
+                        let jobQueue = jobPtr.load(as: JobQueue<UnownedJob>.self)
+                        (<-jobQueue)?.runSynchronously(on: .sharedUnownedExecutor)
+                    }
+                }
+        /* crashes the application
+                    withUnsafePointer(to: jobQueue) {
+                        let rawPtr = UnsafeRawPointer($0)
+                        threadHandle.submitTaskWithExecutor(&executor, rawPtr, helper(_:_:))
+                    } */
+        }
+    }
+
+    public func asUnownedSerialExecutor() -> UnownedSerialExecutor {
+        UnownedSerialExecutor(ordinary: self)
     }
 }
 
-public protocol ServerActor: DistributedActor {
-    distributed func remove_with_id(
-        id: Self.ID
-    ) async throws
+extension UnownedSerialExecutor {
+
+    fileprivate static var sharedDistributed: CustomExecutor =
+        .init(
+            kind: .distributedKind)
+
+    fileprivate static var shared: CustomExecutor = .init(kind: .normalKind)
+
+    public static var sharedUnownedExecutor: UnownedSerialExecutor {
+        UnownedSerialExecutor(ordinary: shared)
+    }
+
+    public static var sharedDistributedUnownedExecutor: UnownedSerialExecutor {
+        UnownedSerialExecutor(ordinary: sharedDistributed)
+    }
+
+    static let sharedSample: SampleFIFOCustomExecutor = .init()
+
+    public static var sharedSampleExecutor: UnownedSerialExecutor {
+        UnownedSerialExecutor(ordinary: sharedSample)
+    }
+}
+
+public final class SampleFIFOCustomExecutor: SerialExecutor {
+    public func asUnownedSerialExecutor() -> UnownedSerialExecutor {
+        UnownedSerialExecutor(ordinary: self)
+    }
+
+    private let threadHandle = SingleThread.create()
+
+    public func enqueue(_ job: consuming ExecutorJob) {
+        let job = UnownedJob(job)
+        let byteCount =
+            MemoryLayout<UnownedJob>.alignment * MemoryLayout<UnownedJob>.stride
+        let pointer = UnsafeMutableRawPointer.allocate(
+            byteCount: byteCount, alignment: MemoryLayout<UnownedJob>.alignment)
+        pointer.storeBytes(of: job, as: UnownedJob.self)
+        threadHandle.submit(pointer) { jobptr in
+            defer {
+                jobptr.deallocate()
+            }
+            let job = jobptr.load(as: UnownedJob.self)
+            job.runSynchronously(on: .sharedSampleExecutor)
+        }
+    }
+
 }

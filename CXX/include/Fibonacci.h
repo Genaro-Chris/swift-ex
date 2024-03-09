@@ -1,8 +1,9 @@
 #ifndef Header_M
 #define Header_M
 
-#include <iostream>
-#include <bridging.h>
+#include <swift/bridging>
+#include <sys/types.h>
+//#include "SwiftLib-Swift.h"
 
 class SWIFT_NAME(CXX_STRUCT) FibonacciCalculatorCplusplus {
 public:
@@ -10,6 +11,8 @@ public:
     uint fibonacci(uint value) const;
 private:
     bool printInvocation;
-};
+} SWIFT_CONFORMS_TO_PROTOCOL(SwiftLib.SwiftProtocol);
+
+void cxx_fuck();
 
 #endif

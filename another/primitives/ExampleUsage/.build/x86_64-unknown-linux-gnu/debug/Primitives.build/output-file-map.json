@@ -1,0 +1,77 @@
+{
+  "": {
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/master.swiftdeps"
+  },
+  "/home/genaro/Projects/swift-concurrency-primitives/Sources/Primitives/Barrier.swift": {
+    "dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Barrier.d",
+    "object": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Barrier.swift.o",
+    "swiftmodule": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Barrier~partial.swiftmodule",
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Barrier.swiftdeps"
+  },
+  "/home/genaro/Projects/swift-concurrency-primitives/Sources/Primitives/Latch.swift": {
+    "dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Latch.d",
+    "object": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Latch.swift.o",
+    "swiftmodule": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Latch~partial.swiftmodule",
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Latch.swiftdeps"
+  },
+  "/home/genaro/Projects/swift-concurrency-primitives/Sources/Primitives/Lock.swift": {
+    "dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Lock.d",
+    "object": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Lock.swift.o",
+    "swiftmodule": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Lock~partial.swiftmodule",
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Lock.swiftdeps"
+  },
+  "/home/genaro/Projects/swift-concurrency-primitives/Sources/Primitives/Locked.swift": {
+    "dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Locked.d",
+    "object": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Locked.swift.o",
+    "swiftmodule": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Locked~partial.swiftmodule",
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Locked.swiftdeps"
+  },
+  "/home/genaro/Projects/swift-concurrency-primitives/Sources/Primitives/Once.swift": {
+    "dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Once.d",
+    "object": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Once.swift.o",
+    "swiftmodule": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Once~partial.swiftmodule",
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Once.swiftdeps"
+  },
+  "/home/genaro/Projects/swift-concurrency-primitives/Sources/Primitives/OnceState.swift": {
+    "dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/OnceState.d",
+    "object": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/OnceState.swift.o",
+    "swiftmodule": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/OnceState~partial.swiftmodule",
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/OnceState.swiftdeps"
+  },
+  "/home/genaro/Projects/swift-concurrency-primitives/Sources/Primitives/Queue.swift": {
+    "dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Queue.d",
+    "object": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Queue.swift.o",
+    "swiftmodule": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Queue~partial.swiftmodule",
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Queue.swiftdeps"
+  },
+  "/home/genaro/Projects/swift-concurrency-primitives/Sources/Primitives/QueueOperation.swift": {
+    "dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/QueueOperation.d",
+    "object": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/QueueOperation.swift.o",
+    "swiftmodule": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/QueueOperation~partial.swiftmodule",
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/QueueOperation.swiftdeps"
+  },
+  "/home/genaro/Projects/swift-concurrency-primitives/Sources/Primitives/SingleThread.swift": {
+    "dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/SingleThread.d",
+    "object": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/SingleThread.swift.o",
+    "swiftmodule": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/SingleThread~partial.swiftmodule",
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/SingleThread.swiftdeps"
+  },
+  "/home/genaro/Projects/swift-concurrency-primitives/Sources/Primitives/Thread.swift": {
+    "dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Thread.d",
+    "object": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Thread.swift.o",
+    "swiftmodule": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Thread~partial.swiftmodule",
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/Thread.swiftdeps"
+  },
+  "/home/genaro/Projects/swift-concurrency-primitives/Sources/Primitives/ThreadPool.swift": {
+    "dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/ThreadPool.d",
+    "object": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/ThreadPool.swift.o",
+    "swiftmodule": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/ThreadPool~partial.swiftmodule",
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/ThreadPool.swiftdeps"
+  },
+  "/home/genaro/Projects/swift-concurrency-primitives/Sources/Primitives/WaitType.swift": {
+    "dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/WaitType.d",
+    "object": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/WaitType.swift.o",
+    "swiftmodule": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/WaitType~partial.swiftmodule",
+    "swift-dependencies": "/home/genaro/Projects/swift-concurrency-primitives/ExampleUsage/.build/x86_64-unknown-linux-gnu/debug/Primitives.build/WaitType.swiftdeps"
+  }
+}

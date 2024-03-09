@@ -1,3 +1,5 @@
+import CXX_Thread
+import SwiftWithCXX
 /*
 See the LICENSE.txt file for this sample’s licensing information.
 
@@ -5,12 +7,10 @@ Abstract:
 Implements the Swift API.
 */
 import cxxLibrary
-import CXX_Thread
-import SwiftWithCXX
 
 public typealias Signal = @convention(c) () -> Void
 
-public func take(body: Signal) {
+public func take(body: @convention(c) () -> Void) {
     body()
 }
 
@@ -42,9 +42,13 @@ public struct FibonacciCalculator {
     }
 }
 
-@_expose(Cxx)
+public protocol SwiftProtocol {}
 
+@_expose(Cxx)
 public actor Hello {}
+
+@_extern(c, "cxx_fuck")
+public func fuck()
 
 public func DisplayStringAndReturnStrCount(msg: String) -> UInt {
     print(msg)

@@ -17,8 +17,8 @@ func tryGuessSwiftLibRoot() -> String {
         else {
             return "/usr/lib/swift"
         }
-        let path = URL(fileURLWithPath: String(decoding: output, as: UTF8.self))
-        return path.deletingLastPathComponent().deletingLastPathComponent().path + "/include/"
+        return URL(fileURLWithPath: String(decoding: output, as: UTF8.self))
+            .deletingLastPathComponent().deletingLastPathComponent().path + "/include/"
     } catch {
         return "/usr/lib/swift"
     }
@@ -62,6 +62,16 @@ let package = Package(
             targets: [
                 "cxxLibrary"
             ]),
+        .library(
+            name: "swiftImpl",
+            targets: [
+                "swiftImpl"
+            ]),
+        .library(
+            name: "ThreadPool",
+            targets: [
+                "ThreadPool"
+            ]),
         .executable(
             name: "server",
             targets: [
@@ -97,20 +107,32 @@ let package = Package(
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
                 .product(name: "SwiftDiagnostics", package: "swift-syntax"),
             ],
-            path: "Implementation"
+            path: "Implementation",
+            swiftSettings: [
+                .enableExperimentalFeature("BodyMacros")
+            ]
         ),
 
-        .target(name: "Interface", dependencies: ["Implementation"], path: "Interface"),
+        .target(
+            name: "Interface", dependencies: ["Implementation"], path: "Interface",
+            swiftSettings: [
+                .enableExperimentalFeature("BodyMacros")
+            ]),
 
         .target(
             name: "CustomExecutor",
             dependencies: [
                 "DistributedHTTPActorSystem",
                 "CXX_Thread",
+                "ThreadPool",
             ], path: "CustomExecutor",
             swiftSettings: [
                 .interoperabilityMode(.Cxx),
                 .enableUpcomingFeature("StrictConcurrency=complete"),
+                .unsafeFlags(
+                    [
+                        "-I", tryGuessSwiftLibRoot(),
+                    ]),
             ]),
 
         // Library that exposes a macro as part of its API, which is used in client programs.
@@ -126,6 +148,9 @@ let package = Package(
             swiftSettings: [
                 .interoperabilityMode(.Cxx),
                 .enableUpcomingFeature("StrictConcurrency=complete"),
+                .unsafeFlags([
+                    "-I", tryGuessSwiftLibRoot(),
+                ]),
             ]),
 
         .executableTarget(
@@ -139,6 +164,9 @@ let package = Package(
             swiftSettings: [
                 .interoperabilityMode(.Cxx),
                 .enableUpcomingFeature("StrictConcurrency=complete"),
+                .unsafeFlags([
+                    "-I", tryGuessSwiftLibRoot(),
+                ]),
             ]
         ),
 
@@ -159,10 +187,24 @@ let package = Package(
                 .enableExperimentalFeature("TypedThrows"),
                 .enableUpcomingFeature("FullyTypedThrows"),
                 .enableExperimentalFeature("NoImplicitCopy"),
+                .enableExperimentalFeature("ExtractConstantsFromMembers"),
+                .enableExperimentalFeature("SymbolLinkageMarkers"),
                 .enableExperimentalFeature("MoveOnlyClasses"),
                 .enableExperimentalFeature("ThenStatements"),
-                //.enableExperimentalFeature("NoncopyableGenerics"),
+                .enableExperimentalFeature("BodyMacros"),
+                .enableExperimentalFeature("ImplicitLastExprResults"),
+                .enableExperimentalFeature("PackIteration"),
+                // .enableExperimentalFeature("NoncopyableGenerics"),
+                .enableExperimentalFeature("StaticExclusiveOnly"),
+                .enableExperimentalFeature("TransferringArgsAndResults"),
+                .enableExperimentalFeature("RegionBasedIsolation"),
+                .enableUpcomingFeature("StrictConcurrency=complete"),
                 .enableExperimentalFeature("TypedThrows"),
+                .enableExperimentalFeature("NonescapableTypes"),
+                .unsafeFlags(
+                    [
+                        "-I", tryGuessSwiftLibRoot(),
+                    ]),
             ]
         ),
 
@@ -176,13 +218,25 @@ let package = Package(
             ], path: "DistributedHTTPActorSystem"
         ),
 
+        .target(name: "swiftImpl", dependencies: [], path: "swift_impl"),
+
+        .target(name: "ThreadPool", dependencies: [], path: "ThreadPool"),
+
         .target(
-            name: "SwiftLib", dependencies: ["SwiftWithCXX", "CXX_Thread"], path: "Swift",
+            name: "SwiftLib", dependencies: ["SwiftWithCXX", "CXX_Thread", "cxxLibrary"],
+            path: "Swift",
+            cxxSettings: [
+                .unsafeFlags([
+                    "-I", tryGuessSwiftLibRoot(),
+                ])
+            ],
             swiftSettings: [
                 .interoperabilityMode(.Cxx),
+                .enableExperimentalFeature("Extern"),
                 .unsafeFlags([
                     "-module-name", "SwiftLib",
                     "-emit-clang-header-path", "./CXX/include/SwiftLib-Swift.h",
+                    "-I", tryGuessSwiftLibRoot(),
                 ]),
             ]
         ),
@@ -190,17 +244,12 @@ let package = Package(
         .target(
             name: "cxxLibrary", path: "cxxLibrary",
             exclude: [
-                /* "cxxLibraryImpl.cpp", "include/", */ "headers/", "omegaException.cpp",
+                /* "cxxLibraryImpl.cpp", "include/", */ "headers/", "omegaException.cpp"
             ],
             //publicHeadersPath: "headers/",
             cxxSettings: [
                 .unsafeFlags([
                     "-I", tryGuessSwiftLibRoot(),
-                ])
-            ],
-            swiftSettings: [
-                .unsafeFlags([
-                    "-enable-experimental-move-only"
                 ])
             ]),
 
@@ -208,21 +257,18 @@ let package = Package(
             name: "SwiftWithCXX",
             dependencies: [], path: "CXX",
             cxxSettings: [
-                .define("SwiftWithCXX")
-            ],
-            swiftSettings: [
-                .unsafeFlags(
-                    [
-                        "-Ounchecked"
-                    ], .when(platforms: [.windows, .linux]))
+                .define("SwiftWithCXX"),
+                .unsafeFlags([
+                    "-I", tryGuessSwiftLibRoot(),
+                ]),
             ]),
 
         .target(
             name: "CXX_Thread",
-            dependencies: [], path: "CXX_Thread",
-            swiftSettings: [
+            dependencies: [], path: "CXX_Thread", exclude: ["threadpoolimpl.cpp"],
+            cxxSettings: [
                 .unsafeFlags([
-                    "-std=c++23"
+                    "-I", tryGuessSwiftLibRoot(),
                 ])
             ]),
 

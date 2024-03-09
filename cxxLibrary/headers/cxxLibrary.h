@@ -4,7 +4,7 @@
 #include <random>
 #include <functional>
 #include <string>
-// #include <swift/bridging>
+#include <swift/bridging>
 
 using namespace std;
 
@@ -77,7 +77,7 @@ public:
     {
         return this->Msg.c_str();
     }
-}; // SWIFT_CONFORMS_TO_PROTOCOL(Swift.Error) SWIFT_SENDABLE;
+}; SWIFT_CONFORMS_TO_PROTOCOL(Swift.Error) SWIFT_UNCHECKED_SENDABLE;
 
 struct cxx_header
 {

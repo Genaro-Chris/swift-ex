@@ -1,0 +1,61 @@
+{
+  "object" : {
+    "artifacts" : [
+
+    ],
+    "dependencies" : [
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "swift-atomics",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/apple/swift-atomics",
+          "name" : "swift-atomics"
+        },
+        "state" : {
+          "checkoutState" : {
+            "revision" : "cd142fd2f64be2100422d658e7411e39489da985",
+            "version" : "1.2.0"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "swift-atomics"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "swift-docc-plugin",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/apple/swift-docc-plugin",
+          "name" : "SwiftDocCPlugin"
+        },
+        "state" : {
+          "checkoutState" : {
+            "branch" : "main",
+            "revision" : "3aad4aabc42835f09f600bb17070f6a11bc84180"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "swift-docc-plugin"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "swift-docc-symbolkit",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/apple/swift-docc-symbolkit",
+          "name" : "SymbolKit"
+        },
+        "state" : {
+          "checkoutState" : {
+            "revision" : "b45d1f2ed151d057b54504d653e0da5552844e34",
+            "version" : "1.0.0"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "swift-docc-symbolkit"
+      }
+    ]
+  },
+  "version" : 6
+}

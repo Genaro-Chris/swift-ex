@@ -179,7 +179,7 @@
 typedef struct _Job Job;
 
 /// A hook to take over global enqueuing.
-typedef SWIFT_CC(swift) void (*swift_task_enqueueGlobal_original)(Job *_Nonnull job);
+typedef SWIFT_CC(swift) void (*const swift_task_enqueueGlobal_original)(Job *_Nonnull job);
 SWIFT_EXPORT_FROM(swift_Concurrency)
 SWIFT_CC(swift)
 void (*_Nullable swift_task_enqueueGlobal_hook)(
@@ -211,7 +211,7 @@ void (*_Nullable swift_task_enqueueGlobalWithDeadline_hook)(
     swift_task_enqueueGlobalWithDeadline_original _Nonnull original);
 
 /// A hook to take over main executor enqueueing.
-typedef SWIFT_CC(swift) void (*swift_task_enqueueMainExecutor_original)(Job *_Nonnull job);
+typedef SWIFT_CC(swift) void (*const swift_task_enqueueMainExecutor_original)(Job *_Nonnull job);
 
 SWIFT_EXPORT_FROM(swift_Concurrency)
 SWIFT_CC(swift)

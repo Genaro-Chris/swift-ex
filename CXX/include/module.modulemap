@@ -1,6 +1,4 @@
 module SwiftWithCXX {
     header "Fibonacci.h"
-   
-
     export *
 }

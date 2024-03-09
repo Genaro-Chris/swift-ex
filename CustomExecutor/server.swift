@@ -35,7 +35,7 @@ public distributed actor Server: ServerActor {
     }
 
     public nonisolated var unownedExecutor: UnownedSerialExecutor {
-        CustomExecutor.sharedDistributedUnownedExecutor
+        .sharedDistributedUnownedExecutor
     }
 
     public distributed func join_with_id<T: SpecialActor>(

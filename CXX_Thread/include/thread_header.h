@@ -1,5 +1,4 @@
-#include <iostream>
-#include <bridging.h>
+#include "swift/bridging"
 #include <vector>
 #include <threads.h>
 #include <thread>
@@ -9,10 +8,9 @@ using namespace std;
 
 using FuncPtr = void (*)(void);
 
-
-struct 
+struct
     Thread : NonCopyable,
-            public ReferenceCounted<Thread>
+             public ReferenceCounted<Thread>
 {
 private:
     std::thread my_thread;
@@ -31,12 +29,14 @@ public:
     void join_all();
     void detach();
     void yield();
-} SWIFT_SHARED_REFERENCE(retain_thread, release_thread) SWIFT_SENDABLE SWIFT_NAME(CXX_Thread);
+} SWIFT_SHARED_REFERENCE(retain_thread, release_thread) SWIFT_UNCHECKED_SENDABLE SWIFT_NAME(CXX_Thread);
 
-inline void retain_thread(Thread *_Nonnull ref) {
+inline void retain_thread(Thread *_Nonnull ref)
+{
     retained(ref);
 }
 
-inline void release_thread(Thread *_Nonnull ref) {
+inline void release_thread(Thread *_Nonnull ref)
+{
     released(ref);
 }

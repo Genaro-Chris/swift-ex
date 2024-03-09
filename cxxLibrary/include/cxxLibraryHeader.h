@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iostream>
+#include "swift/bridging"
 
 // there isn't a way to include swift/bridging in c++ header file in linux yet
 
@@ -41,7 +42,7 @@ public:
     ~cxx_impl_exception();
     void print();
     virtual const char *what() const noexcept;
-}; // SWIFT_CONFORMS_TO_PROTOCOL(Swift.Error) SWIFT_SENDABLE;
+}; SWIFT_CONFORMS_TO_PROTOCOL(Swift.Error) SWIFT_UNCHECKED_SENDABLE;
 
 struct cxx_header
 {

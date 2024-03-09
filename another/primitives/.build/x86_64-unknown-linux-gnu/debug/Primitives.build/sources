@@ -1,0 +1,16 @@
+/home/genaro/Projects/primitives/Sources/Primitives/Barrier.swift
+/home/genaro/Projects/primitives/Sources/Primitives/BlockingQueue.swift
+/home/genaro/Projects/primitives/Sources/Primitives/Buffer.swift
+/home/genaro/Projects/primitives/Sources/Primitives/BufferChannel.swift
+/home/genaro/Projects/primitives/Sources/Primitives/Latch.swift
+/home/genaro/Projects/primitives/Sources/Primitives/Lock.swift
+/home/genaro/Projects/primitives/Sources/Primitives/Locked.swift
+/home/genaro/Projects/primitives/Sources/Primitives/Once.swift
+/home/genaro/Projects/primitives/Sources/Primitives/OnceState.swift
+/home/genaro/Projects/primitives/Sources/Primitives/Order.swift
+/home/genaro/Projects/primitives/Sources/Primitives/Queue.swift
+/home/genaro/Projects/primitives/Sources/Primitives/QueueOperation.swift
+/home/genaro/Projects/primitives/Sources/Primitives/SingleThread.swift
+/home/genaro/Projects/primitives/Sources/Primitives/Thread.swift
+/home/genaro/Projects/primitives/Sources/Primitives/ThreadPool.swift
+/home/genaro/Projects/primitives/Sources/Primitives/WaitType.swift

@@ -21,3 +21,8 @@ uint FibonacciCalculatorCplusplus::fibonacci(uint value) const
     auto ages = swiftCalculator.getAges();
     return swiftCalculator.fibonacci(value - 1) + swiftCalculator.fibonacci(value - 2);
 }
+
+void cxx_fuck()
+{
+    std::cout << "cxx_fuck\n";
+}

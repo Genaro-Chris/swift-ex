@@ -13,7 +13,7 @@ struct ThrowsToResult: PeerMacro {
             throw CustomError.message("@throwsToResult only works on functions")
         }
 
-        guard funcDecl.signature.effectSpecifiers?.throwsSpecifier != nil else {
+        guard funcDecl.signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil else {
             throw CustomError.message("@throwsToResult only works on throwing functions")
         }
 
@@ -87,7 +87,7 @@ struct ThrowsToResult: PeerMacro {
                     \.effectSpecifiers,
                     FunctionEffectSpecifiersSyntax(
                         asyncSpecifier: hasAsync ? TokenSyntax.identifier("async") : nil,
-                        throwsSpecifier: nil)
+                        throwsClause: nil)
                 ).with(
                     \.parameterClause,
                     funcDecl.signature.parameterClause.with(\.parameters, parameterList)

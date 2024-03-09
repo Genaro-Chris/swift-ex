@@ -30,3 +30,6 @@ public macro AddAsync() =
 
 @attached(member, names: named(CodingKeys))
 public macro CustomCodable() = #externalMacro(module: "Implementation", type: "CustomCodable")
+
+@attached(body) 
+public macro Remote() = #externalMacro(module: "Implementation", type: "Remote")

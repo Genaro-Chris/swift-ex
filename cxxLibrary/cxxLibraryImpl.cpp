@@ -5,10 +5,9 @@
 #include <functional>
 #include <any>
 #include <string>
-#include "swift/bridging"
 using namespace std;
 
-void SWIFT_NAME(helloWorld(_:)) hello_world(string msg) 
+void hello_world(string msg) 
 {
     cout << msg << endl;
 }

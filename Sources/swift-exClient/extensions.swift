@@ -49,9 +49,9 @@ extension DiscardingTaskGroup {
     }
 }
 
-let queue = SingleThreadedPool.create()
+let queue = SingleThread.create()
 
-@_silgen_name("swift_task_enqueueMainExecutor")
+/* @_silgen_name("swift_task_enqueueMainExecutor")
 func _enqueueMain(_ job: UnownedJob) {
     var job = consume job
     MyMainActor.queue.submit(&job) { job in
@@ -59,21 +59,26 @@ func _enqueueMain(_ job: UnownedJob) {
         let job = job.loadUnaligned(as: UnownedJob.self)
         job.runSynchronously(on: MyMainActor.sharedUnownedExecutor)
     }
-}
+} */
 
 @globalActor
 final actor MyMainActor: GlobalActor, SerialExecutor {
     static let shared: MyMainActor = MyMainActor()
 
-    static let queue = SingleThreadedPool.create()
+    let queue = SingleThread.create()
 
     nonisolated var unownedExecutor: UnownedSerialExecutor {
         asUnownedSerialExecutor()
     }
 
     nonisolated func enqueue(_ job: consuming ExecutorJob) {
-        let job = UnownedJob(job)
-        _enqueueMain(job)
+        var job = UnownedJob(job)
+        //_enqueueMain(job)
+        queue.submit(&job) { jobPtr in
+            print("Main")
+            let job = jobPtr.load(as: UnownedJob.self)
+            job.runSynchronously(on: .sharedSampleExecutor)
+        }
     }
 
     static var sharedUnownedExecutor: UnownedSerialExecutor {

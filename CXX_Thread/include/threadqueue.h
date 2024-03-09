@@ -1,9 +1,8 @@
-#include <list>
+#include <vector>
 #include <mutex>
 #include <optional>
 #include <condition_variable>
 #include <Ref.h>
-#include "bridging.h"
 
 #pragma once
 
@@ -13,18 +12,23 @@ template <typename T>
 class ThreadSafeQueue
 {
 private:
-    list<T> buffer;
+    vector<T> buffer;
     mutex mtx;
     int index;
+    int current_index;
     condition_variable cv;
 
 public:
     ThreadSafeQueue(const ThreadSafeQueue &) = delete;
     ThreadSafeQueue operator&=(const ThreadSafeQueue &) = delete;
-    ThreadSafeQueue() : index(0) {}
-    static ThreadSafeQueue *_Nonnull create()
+    void operator<<(T with)
     {
-        return new ThreadSafeQueue<T>();
+        this->enqueue(with);
+    }
+    ThreadSafeQueue() : index(0), current_index(0)
+    {
+        vector<T> buf{};
+        buffer = {};
     }
     void enqueue(T value)
     {
@@ -38,11 +42,11 @@ public:
         unique_lock ul{mtx};
         cv.wait(ul, [&]()
                 { return !buffer.empty(); });
-        if (buffer.empty())
+        if (buffer.empty() || index == 0)
             return nullopt;
-        auto val = buffer.front();
+        auto val = buffer[current_index];
+        ++current_index;
         index--;
-        buffer.pop_front();
         return val;
     }
     int length()
