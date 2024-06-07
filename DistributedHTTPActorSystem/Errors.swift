@@ -1,5 +1,5 @@
-import Foundation
 import Distributed
+import Foundation
 import NIO
 
 public enum HTTPActorSystemError: DistributedActorSystemError {

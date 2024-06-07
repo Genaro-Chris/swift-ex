@@ -1,3 +1,5 @@
+#pragma once
+
 #include <thread>
 #include <functional>
 #include "threadqueue.h"
@@ -32,9 +34,9 @@ inline bool operator==(DoneType rhs, DoneType lhs)
     return static_cast<int>(rhs) == static_cast<int>(lhs);
 }
 
-using TaskQueue = ThreadSafeQueue<Task_Empty>;
+using TaskQueue = TSQueue<Task_Empty>;
 
-class SingleThread : NonCopyable, public ReferenceCounted<SingleThread>
+class SingleThread : NonCopyableClass, public ReferenceCountedClass<SingleThread>
 {
 private:
     atomic<DoneType> done;
@@ -55,10 +57,12 @@ public:
 
 inline void retain_single(SingleThread *_Nonnull ref)
 {
-    retained(ref);
+    ref->addref();
+    // retained(ref);
 }
 
 inline void release_single(SingleThread *_Nonnull ref)
 {
-    released(ref);
+    ref->delref();
+    // released(ref);
 }

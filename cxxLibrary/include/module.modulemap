@@ -1,0 +1,6 @@
+module cxxLibrary {
+    header "cxxLibraryHeader.h"
+    header "moveonly.h"
+    
+    export *
+}

@@ -143,30 +143,30 @@ public final class CustomExecutor: SerialExecutor, @unchecked Sendable {
     public func enqueue(_ job: consuming ExecutorJob) {
         jobQueue <- UnownedJob(job)
         switch kind {
-            case .distributedKind:
-                var executor = UnownedSerialExecutor.sharedDistributedUnownedExecutor
-                // warning: forming 'UnsafeRawPointer' to a variable of type 'JobQueue'; this is likely incorrect because 'JobQueue' may contain an object reference
-                //threadHandle.submitTaskWithExecutor(&executor, &jobQueue, helper(_:_:))
-                // solutuon
-                // also withUnsafe[Mutable]Pointer(to:), withUnsafeBytes(of:)
-                withUnsafeMutableBytes(of: &jobQueue) { rawPtr in
-                    threadHandle.submitTaskWithExecutor(
-                        &executor, rawPtr.baseAddress!, helper(_:_:))
-                }
+        case .distributedKind:
+            var executor = UnownedSerialExecutor.sharedDistributedUnownedExecutor
+            // warning: forming 'UnsafeRawPointer' to a variable of type 'JobQueue'; this is likely incorrect because 'JobQueue' may contain an object reference
+            //threadHandle.submitTaskWithExecutor(&executor, &jobQueue, helper(_:_:))
+            // solutuon
+            // also withUnsafe[Mutable]Pointer(to:), withUnsafeBytes(of:)
+            withUnsafeMutableBytes(of: &jobQueue) { rawPtr in
+                threadHandle.submitTaskWithExecutor(
+                    &executor, rawPtr.baseAddress!, helper(_:_:))
+            }
 
-            case .normalKind:
-                // warning: forming 'UnsafeRawPointer' to a variable of type 'JobQueue'; this is likely incorrect because 'JobQueue' may contain an object reference
-                //threadHandle.submitTaskWithExecutor(&executor, &jobQueue, helper(_:_:))
-                // solutuon
-                // also withUnsafe[Mutable]Pointer(to:), withUnsafeBytes(of:)
-                withUnsafeMutableBytes(of: &jobQueue) { rawPtr in
-                    threadHandle.submit(
-                        rawPtr.baseAddress!
-                    ) { jobPtr in
-                        let jobQueue = jobPtr.load(as: JobQueue<UnownedJob>.self)
-                        (<-jobQueue)?.runSynchronously(on: .sharedUnownedExecutor)
-                    }
+        case .normalKind:
+            // warning: forming 'UnsafeRawPointer' to a variable of type 'JobQueue'; this is likely incorrect because 'JobQueue' may contain an object reference
+            //threadHandle.submitTaskWithExecutor(&executor, &jobQueue, helper(_:_:))
+            // solutuon
+            // also withUnsafe[Mutable]Pointer(to:), withUnsafeBytes(of:)
+            withUnsafeMutableBytes(of: &jobQueue) { rawPtr in
+                threadHandle.submit(
+                    rawPtr.baseAddress!
+                ) { jobPtr in
+                    let jobQueue = jobPtr.load(as: JobQueue<UnownedJob>.self)
+                    (<-jobQueue)?.runSynchronously(on: .sharedUnownedExecutor)
                 }
+            }
         /* crashes the application
                     withUnsafePointer(to: jobQueue) {
                         let rawPtr = UnsafeRawPointer($0)
@@ -182,17 +182,17 @@ public final class CustomExecutor: SerialExecutor, @unchecked Sendable {
 
 extension UnownedSerialExecutor {
 
-    fileprivate static var sharedDistributed: CustomExecutor =
+    fileprivate nonisolated(unsafe) static var sharedDistributed: CustomExecutor =
         .init(
             kind: .distributedKind)
 
-    fileprivate static var shared: CustomExecutor = .init(kind: .normalKind)
+    fileprivate nonisolated(unsafe) static var shared: CustomExecutor = .init(kind: .normalKind)
 
     public static var sharedUnownedExecutor: UnownedSerialExecutor {
         UnownedSerialExecutor(ordinary: shared)
     }
 
-    public static var sharedDistributedUnownedExecutor: UnownedSerialExecutor {
+    public nonisolated(unsafe) static var sharedDistributedUnownedExecutor: UnownedSerialExecutor {
         UnownedSerialExecutor(ordinary: sharedDistributed)
     }
 

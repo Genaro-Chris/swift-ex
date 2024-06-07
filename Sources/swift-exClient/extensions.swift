@@ -1,11 +1,12 @@
 import CXX_Thread
 import Foundation
+import Hook
 
 extension TaskGroup {
 
     mutating func addTask<T: Sendable>(
         priority: TaskPriority? = nil, operation: @escaping @Sendable (T) async -> ChildTaskResult,
-        value: @autoclosure @escaping () -> T
+        value: @autoclosure @escaping @Sendable () -> T
     ) {
         self.addTask(priority: priority) {
             await operation(value())
@@ -17,7 +18,7 @@ extension ThrowingTaskGroup {
 
     mutating func addTask<T: Sendable>(
         priority: TaskPriority? = nil, operation: @escaping @Sendable (T) async -> ChildTaskResult,
-        value: @autoclosure @escaping () -> T
+        value: @autoclosure @escaping @Sendable () -> T
     ) {
         self.addTask(priority: priority) {
             await operation(value())
@@ -28,7 +29,7 @@ extension ThrowingTaskGroup {
 extension ThrowingDiscardingTaskGroup {
 
     mutating func addTask<T: Sendable>(
-        priority: TaskPriority? = nil, value: @autoclosure @escaping () -> T,
+        priority: TaskPriority? = nil, value: @autoclosure @escaping @Sendable () -> T,
         operation: @escaping @Sendable (T) async -> Void
     ) {
         self.addTask(priority: priority) {
@@ -40,7 +41,7 @@ extension ThrowingDiscardingTaskGroup {
 extension DiscardingTaskGroup {
 
     mutating func addTask<T: Sendable>(
-        priority: TaskPriority? = nil, value: @autoclosure @escaping () -> T,
+        priority: TaskPriority? = nil, value: @autoclosure @escaping @Sendable () -> T,
         operation: @escaping @Sendable (T) async -> Void
     ) {
         self.addTask(priority: priority) {
@@ -77,7 +78,7 @@ final actor MyMainActor: GlobalActor, SerialExecutor {
         queue.submit(&job) { jobPtr in
             print("Main")
             let job = jobPtr.load(as: UnownedJob.self)
-            job.runSynchronously(on: .sharedSampleExecutor)
+            job.runSynchronously(on: MyMainActor.sharedUnownedExecutor)
         }
     }
 
@@ -96,10 +97,10 @@ func someMainActorFunc() async {
 
 // doesn't work
 func play1() async throws {
-    swift_task_enqueueGlobal_hook = { job, original in
+    await MainActor.run {swift_task_enqueueGlobal_hook = { job, original in
         print("enqueueGlobal")
         original(job)
-    }
+    }}
     /* swift_task_enqueueGlobal_hook = { job, original in
     print("enqueueGlobal")
     original(job)

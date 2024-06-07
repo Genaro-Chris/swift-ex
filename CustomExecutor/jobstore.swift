@@ -16,7 +16,7 @@ class JobQueue<Element>: @unchecked Sendable {
         defer {
             lock.unlock()
         }
-        guard let _ = array.first else {
+        guard array.first != nil else {
             return nil
         }
         return array.removeFirst()
@@ -37,4 +37,3 @@ internal func helper(_ exe: UnsafeRawPointer, _ store: UnsafeRawPointer) {
 
 prefix operator <-
 infix operator <-
-

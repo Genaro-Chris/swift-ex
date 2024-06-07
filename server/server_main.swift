@@ -1,5 +1,6 @@
-import CustomExecutor
+import Foundation
 import SignalHandler
+import shared
 
 @main
 enum Main {
@@ -10,17 +11,25 @@ enum Main {
         }
 
         async let _ = SignalHandler.start(with: .SIGINT, .SIGQUIT, .SIGTSTP) { _ in
-            let clients = try? await server.allClients()
-            for id in clients! {
-                let item = try? Client.resolve(id: id, using: server.actorSystem)
-                try? await server.remove_with_id(id: id)
-                try? await item?.execute { id in
-                    Task {
-                        try await print("Port: \(item?.port ?? 0)")
-                        print("\(id) disconnected")
+            let clients = try? await server.allClientsID()
+            await withDiscardingTaskGroup { group in
+                for id in clients! {
+                    let item = try? Client.resolve(id: id, using: server.actorSystem)
+                    // try? await server.remove_with_id(id: id)
+                    group.addTask {
+                        #if swift(<6) && compiler(<6)
+                            try? await item?.execute { id in
+                                try await print("Port: \(item?.port ?? 0)")
+                                print("\(id) disconnected")
+                            }
+                        #endif
+                        try? await item?.close(server: server)
+
                     }
+
                 }
             }
+
             exit(1)
         }
 
@@ -28,15 +37,22 @@ enum Main {
             guard readLine() != nil else {
                 break
             }
-            try await print(server.allClients())
+            /* try await server.allClientsID().forEach { id in
+                print("\(id)")
+                try await Client.resolve(id: id, using: server.actorSystem).health_check()
+            } */
+            for id in try await server.allClientsID() {
+                print("\(id)")
+                try await Client.resolve(id: id, using: server.actorSystem).health_check()
+            }
         }
     }
 }
 
-extension Array {
+extension Array where Element: Sendable {
 
     @usableFromInline
-    func forEach(body: (Element) async throws -> Void) async rethrows {
+    nonisolated func forEach(body: (Element) async throws -> Void) async rethrows {
         for item in self {
             try await body(item)
         }

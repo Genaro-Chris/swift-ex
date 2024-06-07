@@ -45,16 +45,16 @@ public struct AddAsyncMacro: PeerMacro {
             \.trailingTrivia, [])
         {
 
-            case .none: break
+        case .none: break
 
-            case .some(let expression):
-                switch expression.description {
-                    case "Void", "()": break
-                    default:
-                        throw CustomError.message(
-                            "@addAsync requires an function that returns void or nothing"
-                        )
-                }
+        case .some(let expression):
+            switch expression.description {
+            case "Void", "()": break
+            default:
+                throw CustomError.message(
+                    "@addAsync requires an function that returns void or nothing"
+                )
+            }
 
         }
 

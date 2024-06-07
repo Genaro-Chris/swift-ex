@@ -91,3 +91,8 @@ extension Task where Failure == Error {
         () async throws -> Success
     ) -> Task<Success, Error>
 }
+
+
+@_spi(ConcurrencyExecutors)
+@_silgen_name("swift_task_isOnExecutor")
+public func _taskIsOnExecutor<Executor: SerialExecutor>(_ executor: Executor) -> Bool

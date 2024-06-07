@@ -9,7 +9,7 @@ public final class SingleThread: @unchecked Sendable {
         waitForAll()
     }
 
-    private let queue: ThreadSafeQueue<QueueOperation>
+    private let queue: ThreadSafeQueue<Tasks>
 
     private let waitType: WaitType
 
@@ -21,7 +21,7 @@ public final class SingleThread: @unchecked Sendable {
         self.waitType = waitType
         queue = ThreadSafeQueue()
         barrier = Barrier(value: 2)!
-        handle = start(queue: queue, barrier: barrier)
+        handle = start(queue: queue)
     }
 
     private func end() {
@@ -29,12 +29,12 @@ public final class SingleThread: @unchecked Sendable {
     }
 
     private func waitForAll() {
-        queue <- .wait
+        queue <- { [barrier] in barrier.arriveAndWait() } 
         barrier.arriveAndWait()
     }
 
     public func submit(_ body: @escaping () -> Void) {
-        queue <- .ready(element: body)
+        queue <- body
     }
 
     deinit {
@@ -48,16 +48,10 @@ public final class SingleThread: @unchecked Sendable {
     }
 }
 
-private func start(queue: ThreadSafeQueue<QueueOperation>, barrier: Barrier) -> Thread {
-    let thread = Thread { [queue, barrier] in
+private func start(queue: ThreadSafeQueue<Tasks>) -> Thread {
+    let thread = Thread { [queue] in
         while let op = queue.next() {
-            switch (op, Thread.current.isCancelled) {
-                case let (.ready(work), false): work()
-                case (.wait, false):
-                    barrier.arriveAndWait()
-                case (.notYet, false): continue
-                default: return
-            }
+            op()
         }
     }
     thread.start()

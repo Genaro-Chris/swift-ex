@@ -10,7 +10,7 @@ uint zeroed()
     return 0;
 }
 
-Thread::Thread(FuncPtr _Nonnull with)
+CXX_Thread::CXX_Thread(FuncPtr _Nonnull with)
 {
     this->my_thread = std::thread(
         [with]()
@@ -20,12 +20,12 @@ Thread::Thread(FuncPtr _Nonnull with)
     std::cout << "Constructor called with " << zeroed() << std::endl;
 }
 
-void Thread::dynamicallyCall(vector<int> withArguments)
+void CXX_Thread::dynamicallyCall(vector<int> withArguments)
 {
     std::cout << "Dynamically called this with " << zeroed() << std::endl;
 }
 
-Thread::~Thread()
+CXX_Thread::~CXX_Thread()
 {
     this->join_all();
 
@@ -33,7 +33,7 @@ Thread::~Thread()
 }
 
 /// @brief  the thread ie wait for the thread to finish its execution
-void Thread::join_all()
+void CXX_Thread::join_all()
 {
     if (this->my_thread.joinable())
     {
@@ -48,29 +48,29 @@ void Thread::join_all()
     }
 }
 
-Thread *_Nonnull Thread::create(FuncPtr _Nonnull with)
+CXX_Thread *_Nonnull CXX_Thread::create(FuncPtr _Nonnull with)
 {
-    return new Thread(with);
+    return new CXX_Thread(with);
 }
 
-void Thread::run(void(callback)(void const *value), void const *value)
+void CXX_Thread::run(void(callback)(void const *value), void const *value)
 {
     // this->detach();
     auto new_thread = std::thread(callback, value);
     this->my_thread.swap(new_thread);
 }
 
-void Thread::Run(void(callback)(void const *value, void const *newValue), void const *value, void const *newValue)
+void CXX_Thread::Run(void(callback)(void const *value, void const *newValue), void const *value, void const *newValue)
 {
     std::thread(callback, value, newValue).join();
 }
 
-void Thread::RunOnce(void(callback)(void const *value), void const *value)
+void CXX_Thread::RunOnce(void(callback)(void const *value), void const *value)
 {
     std::thread(callback, value).join();
 }
 
-void Thread::swap_with(FuncPtr _Nonnull with)
+void CXX_Thread::swap_with(FuncPtr _Nonnull with)
 {
     this->detach();
     auto new_thread = thread(
@@ -81,17 +81,17 @@ void Thread::swap_with(FuncPtr _Nonnull with)
     this->my_thread.swap(new_thread);
 }
 
-Thread *_Nonnull Thread::new_thread()
+CXX_Thread *_Nonnull CXX_Thread::new_thread()
 {
-    return new Thread();
+    return new CXX_Thread();
 }
 
-void Thread::yield()
+void CXX_Thread::yield()
 {
     thrd_yield();
 }
 
-void Thread::detach()
+void CXX_Thread::detach()
 {
     this->my_thread.detach();
 }

@@ -15,7 +15,7 @@ private:
 
 public:
     OmegaException(string str, DATA_T data, const source_location &loc = source_location::current(), stacktrace trace = stacktrace::current()) : err_str(std::move(str)), user_data(std::move(data)), location(std::move(loc)), backtrace_(std::move(trace)) {}
-    ~OmegaException();
+    ~OmegaException() = default;
 
     string &what() { return err_str; }
     const string &what() const noexcept { return err_str; }

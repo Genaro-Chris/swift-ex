@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdint.h>
 
 #if !defined(__has_feature)
@@ -169,12 +171,15 @@
 #define SWIFT_CONTEXT __attribute__((swift_context))
 #define SWIFT_ERROR_RESULT __attribute__((swift_error_result))
 #define SWIFT_INDIRECT_RESULT __attribute__((swift_indirect_result))
+
 #else
 #define SWIFT_CC_swift
 #define SWIFT_CONTEXT
 #define SWIFT_ERROR_RESULT
 #define SWIFT_INDIRECT_RESULT
 #endif
+
+#define SWIFT_MAIN_ACTOR __attribute__((swift_attr("@MainActor")))
 
 typedef struct _Job Job;
 
@@ -183,7 +188,7 @@ typedef SWIFT_CC(swift) void (*const swift_task_enqueueGlobal_original)(Job *_No
 SWIFT_EXPORT_FROM(swift_Concurrency)
 SWIFT_CC(swift)
 void (*_Nullable swift_task_enqueueGlobal_hook)(
-    Job *_Nonnull job, swift_task_enqueueGlobal_original _Nonnull original);
+    Job *_Nonnull job, swift_task_enqueueGlobal_original _Nonnull original) SWIFT_MAIN_ACTOR;
 
 /// A hook to take over global enqueuing with delay.
 typedef SWIFT_CC(swift) void (*swift_task_enqueueGlobalWithDelay_original)(

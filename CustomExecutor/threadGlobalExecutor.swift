@@ -118,3 +118,50 @@ enum ClockID: Int32 {
     case continous = 1, suspending
 }
  */
+
+import CXX_Thread
+
+import class CXX_Thread.CXX_ThreadPool
+
+/// Example of a custom Executor use c++ ThreadPool of an actor
+public final class CustomThreadGlobalExecutor: SerialExecutor, TaskExecutor, @unchecked Sendable {
+
+    static private let jobQueue = JobQueue<UnownedJob>()
+
+    private let pool = CXX_ThreadPool.create(CPU_Count)
+
+    public func enqueue(_ job: consuming ExecutorJob) {
+        CustomThreadGlobalExecutor.jobQueue <- UnownedJob(job)
+        // warning: forming 'UnsafeRawPointer' to a variable of type 'JobQueue'; this is likely incorrect because 'JobQueue' may contain an object reference
+        // threadHandle.submitTaskWithExecutor(&executor, &jobQueue, helper(_:_:))
+        // proposed solutuon crashes the application
+        /* withUnsafePointer(to: &jobQueue) { rawPtr in
+            threadpool.submit(rawPtr) {
+                let jobQueue = $0.load(as: JobQueue<UnownedJob>.self)
+                (<-jobQueue)?.runSynchronously(on: .generic)
+            }
+        } */
+        var serialExecutor = asUnownedSerialExecutor()
+        var taskExecutor = asUnownedTaskExecutor()
+        pool.submitTaskWithExecutor(&serialExecutor, &taskExecutor) { s, t in
+            let executor = s.load(as: UnownedSerialExecutor.self)
+            let taskExecutor = t.load(as: UnownedTaskExecutor.self)
+            (<-CustomThreadGlobalExecutor.jobQueue)?.runSynchronously(
+                isolatedTo: executor, taskExecutor: taskExecutor)
+        }
+
+    }
+
+    public func asUnownedSerialExecutor() -> UnownedSerialExecutor {
+        UnownedSerialExecutor(ordinary: self)
+    }
+}
+
+extension CustomThreadGlobalExecutor {
+
+    public static let sharedT: CustomThreadGlobalExecutor = .init()
+
+    public static let sharedUnownedExecutor: UnownedSerialExecutor =
+        UnownedSerialExecutor(ordinary: sharedT)
+
+}

@@ -2,26 +2,27 @@
 
 #include <concepts>
 #include <type_traits>
+#include <atomic>
 
 using namespace std;
 
-class NonCopyable
+class NonCopyableClass
 {
 protected:
-    NonCopyable() = default;
-    ~NonCopyable() = default; /// Protected non-virtual destructor
-    NonCopyable(NonCopyable &&) = default;
-    NonCopyable &operator=(NonCopyable &&) = default;
-    NonCopyable(const NonCopyable &) = delete;
-    NonCopyable &operator=(const NonCopyable &) = delete;
+    NonCopyableClass() = default;
+    ~NonCopyableClass() = default; /// Protected non-virtual destructor
+    NonCopyableClass(NonCopyableClass &&) = default;
+    NonCopyableClass &operator=(NonCopyableClass &&) = default;
+    NonCopyableClass(const NonCopyableClass &) = delete;
+    NonCopyableClass &operator=(const NonCopyableClass &) = delete;
 };
 
 template <class Subclass>
-class ReferenceCounted
+class ReferenceCountedClass
 {
 
 public:
-    ReferenceCounted() : referenceCount(0) {}
+    ReferenceCountedClass() : referenceCount(1) {}
     // NO virtual destructor!  Subclass should have a virtual destructor if it is not sealed.
 
     void addref() const { ++referenceCount; }
@@ -35,16 +36,16 @@ public:
     bool isSoleOwner() const { return referenceCount == 1; }
 
 private:
-    ReferenceCounted(const ReferenceCounted &); // = delete;
-    void operator=(const ReferenceCounted &);   // = delete;
-    mutable int32_t referenceCount;
+    ReferenceCountedClass(const ReferenceCountedClass &); // = delete;
+    void operator=(const ReferenceCountedClass &);   // = delete;
+    mutable atomic_int referenceCount;
 };
 
 // Concept for subclassing
 template <typename BaseClass, typename SubClass>
 concept SubClasser = common_reference_with<SubClass, BaseClass> || common_with<BaseClass, SubClass> || derived_from<SubClass, BaseClass> || convertible_to<BaseClass, SubClass> or convertible_to<BaseClass, SubClass> or same_as<BaseClass, SubClass>;
 
-// For classes that directly subclass `ReferenceCounted` class or implement addref & delref methods
+// For classes that directly subclass `ReferenceCountedClass` class or implement addref & delref methods
 template <typename BaseClass, typename SubClass>
 concept RetainAndReleaser = SubClasser<BaseClass, SubClass> or requires(const SubClass &ex) {
     {
@@ -55,17 +56,17 @@ concept RetainAndReleaser = SubClasser<BaseClass, SubClass> or requires(const Su
     } -> std::same_as<void>;
 };
 
-// Passed the superclass that inherits from ReferenceCounted class
+// Passed the base class that inherits from ReferenceCountedClass class
 template <typename T>
-    requires RetainAndReleaser<ReferenceCounted<T>, T>
+    requires RetainAndReleaser<ReferenceCountedClass<T>, T>
 inline void retained(T *_Nonnull ref)
 {
     ref->addref();
 }
 
-// Passed the superclass that inherits from ReferenceCounted class
+// Passed the base class that inherits from ReferenceCountedClass class
 template <typename T>
-    requires RetainAndReleaser<ReferenceCounted<T>, T>
+    requires RetainAndReleaser<ReferenceCountedClass<T>, T>
 inline void released(T *_Nonnull ref)
 {
     ref->delref();

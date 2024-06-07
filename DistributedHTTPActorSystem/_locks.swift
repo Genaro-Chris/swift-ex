@@ -195,13 +195,13 @@ public final class ConditionLock<T: Equatable> {
                 return true
             }
             switch pthread_cond_timedwait(self.cond, self.mutex.mutex, &timeoutAbs) {
-                case 0:
-                    continue
-                case ETIMEDOUT:
-                    self.unlock()
-                    return false
-                case let e:
-                    fatalError("caught error \(e) when calling pthread_cond_timedwait")
+            case 0:
+                continue
+            case ETIMEDOUT:
+                self.unlock()
+                return false
+            case let e:
+                fatalError("caught error \(e) when calling pthread_cond_timedwait")
             }
         }
     }
@@ -217,3 +217,6 @@ public final class ConditionLock<T: Equatable> {
         precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
     }
 }
+
+
+extension Lock: @unchecked Sendable {}

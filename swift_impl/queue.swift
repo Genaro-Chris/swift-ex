@@ -27,7 +27,7 @@ extension NSLock {
 }
 
 // My impl
-public class TSQueue<Element>: @unchecked Sendable {
+public class STSQueue<Element>: @unchecked Sendable {
 
     public enum QueueOp {
         case ready(element: Element)
@@ -36,7 +36,7 @@ public class TSQueue<Element>: @unchecked Sendable {
     }
 
     private var array: [QueueOp] = Array()
-    private let lock = NSRecursiveLock()
+    private let lock = NSLock()
     func enqueue(_ val: Element) {
         enqueue(.ready(element: val))
     }
@@ -62,17 +62,17 @@ public class TSQueue<Element>: @unchecked Sendable {
     public init() {}
 }
 
-extension TSQueue {
-    public static func <- (this: TSQueue, value: Element) {
+extension STSQueue {
+    public static func <- (this: STSQueue, value: Element) {
         this.enqueue(value)
     }
-    public static prefix func <- (this: TSQueue) -> QueueOp {
+    public static prefix func <- (this: STSQueue) -> QueueOp {
         this.dequeue()
     }
 
 }
 
-extension TSQueue: Sequence, IteratorProtocol {
+extension STSQueue: Sequence, IteratorProtocol {
     public func next() -> QueueOp? {
         let value = <-self
         if case .stop = value {

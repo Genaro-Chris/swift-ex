@@ -8,8 +8,8 @@ import SwiftWithCXX
 import _Differentiation
 import cxxLibrary
 
-@_used var usedVar: Int = 1
-@_section("__TEXT,__mysection") var sectionVar: Int = 2
+@_used nonisolated(unsafe) var usedVar: Int = 1
+@_section("__TEXT,__mysection") nonisolated(unsafe) var sectionVar: Int = 2
 
 internal final class UniqueThread: Thread {
 
@@ -43,14 +43,14 @@ internal final class UniqueThread: Thread {
     }
 }
 
-dynamic func productss(acb: Int) -> Int {
+dynamic func product(b: Int) -> Int {
     print("\(#function) was called")
-    return acb * acb
+    return b * b
 }
 
-@_dynamicReplacement(for:productss(acb:))
+@_dynamicReplacement(for:product(b:))
 func quotient(y: Int) -> Int {
-    _ = productss(acb: y)
+    _ = product(b: y)
     print("\(#function) was called")
     return y / y
 }
@@ -86,7 +86,11 @@ struct Perceptron: Differentiable {
 
 extension Thread {
     var id: String {
-        String(getThreadID())
+        "\(getThreadID())"
+        // <unknown>:0: error: circular reference
+        // <unknown>:0: note: through reference here
+        // swift 6.0
+        // String(getThreadID())
     }
 }
 
@@ -138,6 +142,19 @@ func jo() {
 @_marker
 protocol Send {}
 
+func exFunctype() {
+    let _:
+        @convention(thin) (  //@convention(thick) () -> (),
+            @convention(thin) () -> Void,
+            @convention(c) () -> Void,
+            @convention(c,cType:"intptr_t (*)(size_t)") (Int) -> Int,
+            @convention(block) () -> Void
+                //@convention(method) () -> (),
+                //@convention(objc_method) () -> (),
+                //@convention(witness_method: Bendable) (Fork) -> ()) -> ()
+        ) -> Void
+}
+
 #if $TypedThrows
     enum NewError: Error {
         case oops
@@ -158,6 +175,14 @@ extension Int: Send {}
 
 @dynamicCallable
 struct NonCopyWithGen<T>: ~Copyable {
+    var item: T
+    func dynamicallyCall(withArguments: [T] = []) {
+        print("Dynamically called this with \(withArguments)")
+    }
+}
+
+@dynamicCallable
+struct CopyWithGen<T>: Copyable {
     var item: T
     func dynamicallyCall(withArguments: [T] = []) {
         print("Dynamically called this with \(withArguments)")
@@ -198,12 +223,12 @@ class WeakRef {
         }
     } */
 
-func forValueType<T: _BitwiseCopyable>(value: T) {
+func forValueType<T: BitwiseCopyable>(value: T) {
     print("\(value) is of type \(type(of: value))")
 
 }
 
-extension Int: _BitwiseCopyable {}
+extension Int: BitwiseCopyable {}
 //extension ThreadPool : _BitwiseCopyable {}
 
 class SingleBox<Boxed> {
@@ -215,6 +240,9 @@ class SingleBox<Boxed> {
 }
 
 struct Angle {
+    @available(
+        *, noasync, message: "Example of a declaration that can not be used in an async context"
+    )
     private var degrees: Double
     private var point: Double = 0
     var radians: Double {
@@ -262,8 +290,8 @@ func example<each T>(_ pack: repeat each T, tuple_pack: (repeat each T)) {
     print("pack", (repeat each pack))
     print("tuple_pack", (repeat each tuple_pack))
 
-    print("iterate pack")
     #if hasFeature(PackIteration) || $PackIteration
+        print("iterate pack")
         for (l, r) in repeat (each pack, each tuple_pack) {
             print(l, r)
         }
@@ -285,6 +313,23 @@ class Something {
     private var storage: UnsafeMutableRawPointer {
         _getUnsafePointerToStoredProperties(self) + MemoryLayout<Header>.stride
     }
+}
+
+func isEqual<T>(a: T, b: T) -> Bool {
+    var (a, b) = (a, b)
+    if _isPOD(T.self) {
+        return withUnsafePointer(to: &a) { aptr -> Bool in
+            return withUnsafePointer(to: &b) { bptr -> Bool in
+                return memcmp(aptr, bptr, MemoryLayout<T>.size) == 0
+            }
+        }
+
+    }
+    fatalError("Hmm")
+}
+
+func isEqual<T: Equatable>(a: T, b: T) -> Bool {
+    a == b
 }
 
 func hasPadding<T>(_ value: T) -> Bool {
@@ -342,7 +387,7 @@ func sizeOfAllFields(_ value: Any) -> Int {
                     fatalError("TODO")
                 case .set:
                     fatalError("TODO")
-                @unknown default: 
+                @unknown default:
                     fatalError("TODO")
             }
     }
@@ -482,6 +527,15 @@ class Ex: CustomStringConvertible {
     init() {}
 }
 
+@available(macOS 13.0, *)
+
+public struct BackDeployable {}
+
+extension BackDeployable {
+    @backDeployed(before: macOS 12.0)
+    public func deployed() {}
+}
+
 @CustomCodable
 struct PersonDetail: CustomStringConvertible {
     var description: String {
@@ -491,7 +545,44 @@ struct PersonDetail: CustomStringConvertible {
     @CoW var details: Ex = Ex(age: 18, name: "Ada")
 }
 
-#if !os(Linux)
+#if hasFeature(BodyMacros) || $BodyMacros || hasFeature(PreambleMacros)
+    // <unknown>:0: error: circular reference
+    // <unknown>:0: note: through reference here
+    // swift 6.0
+    @Remote
+    func f(a: Int, b: String) async throws -> String {
+        print("\(a), \(b)")
+        return b
+    }
+
+    @Traced
+    // <unknown>:0: error: circular reference
+    // <unknown>:0: note: through reference here
+    // swift 6.0
+    func aboutToTrace() {
+        print(#function)
+    }
+#endif
+
+#if hasFeature(CodeItemMacros)
+    func codeItem(a: Int?, b: Int?) {
+        #unwrap
+    }
+
+#endif
+
+@DTO
+public struct DTOStruct {
+    private struct Blueprint {
+        var id: UUID
+        var createdAt: Date
+        var title: String
+        var description: String
+        var items: [Int]
+    }
+}
+
+#if os(macOS)
     func confirm() {
         _ = withObservationTracking {
             details.age
@@ -537,7 +628,7 @@ struct PersonDetail: CustomStringConvertible {
      */
 #endif
 
-extension DispatchQueue: SerialExecutor, @unchecked Sendable {
+extension DispatchQueue: @retroactive SerialExecutor, @unchecked @retroactive Sendable {
     public func enqueue(_ job: consuming ExecutorJob) {
         let job = UnownedJob(job)
         self.async {
@@ -545,15 +636,17 @@ extension DispatchQueue: SerialExecutor, @unchecked Sendable {
         }
     }
 
-    static let shared = DispatchQueue(label: "DispatchQueue-Executor")
+    // static let shared = DispatchQueue(label: "DispatchQueue-Executor")
 
     public func asUnownedSerialExecutor() -> UnownedSerialExecutor {
-        UnownedSerialExecutor(ordinary: Self.shared)  //Self.global(priority: .low))
+        UnownedSerialExecutor(ordinary: self)  //Self.global(priority: .low))
     }
 }
 
 class OClass {
     var age = 0
+
+    func method() {}
 
     deinit {
         print("Deinitializing \(self)")
@@ -567,30 +660,75 @@ public actor CustomActor {
 
     nonisolated public var unownedExecutor: UnownedSerialExecutor {
         //DispatchQueue(label: "Ex", attributes: .concurrent).asUnownedSerialExecutor()
-        .sharedUnownedExecutor
+        MainExecutor.sharedUnownedExecutor
     }
 
     func example() async {
-        let value: SwiftLib.SwiftProtocol = CXX_STRUCT(false)
+        let value: SwiftProtocol = CXX_STRUCT(false)
         print(value)
-        print("Fib 5 \(SwiftWithCXX.CXX_STRUCT(true).fibonacci(5))")
+        print("Fib 5 \(CXX_STRUCT(true).fibonacci(5))")
         print(
             "CustomActor instance Thread \(Thread.current.name ?? "main") \(Thread.current.qualityOfService) executed \(Thread.current.isMainThread)\n"
         )
-        print("Executing \(Thread.current.description) with id \(Thread.current.id)")
+        print("Executing \(Thread.current.description) with id \(Thread.current.id)")  //
     }
 
     #if $TransferringArgsAndResults || hasFeature(TransferringArgsAndResults)
         func take(_ value: transferring OClass) {
             print(value)
         }
+
+        func retNs() async -> transferring OClass {
+            return OClass()
+        }
     #endif
+
+    /* func run<T>(_ block: () throws -> T) rethrows -> T {
+        block()
+    }
+
+    private static func runWith<Act: Actor, T>(act: isolated Act, _ block: () throws -> T) rethrows -> T {
+        return try block()
+    }
+
+    static func run<T: Sendable>(_ block: () throws -> T) async rethrows -> T {
+        return try await runWith(act: shared) {
+            try block()
+        }
+    } */
+
+    private static func runOn<Act: Actor, T: Sendable>(
+        act: isolated Act = CustomActor.shared, _ block: () throws -> T
+    ) async rethrows
+        -> T
+    {
+        return try block()
+    }
+
+    private static func runWith<Act: Actor, T: Sendable>(
+        act: isolated Act = #isolation ?? CustomActor.shared, _ block: @isolated(any) () throws -> T
+    ) async rethrows
+        -> T
+    {
+        return try await block()
+    }
+
+    static func run<T: Sendable>(_ block: @escaping @CustomActor () throws -> T) async rethrows -> T {
+        /* _ = extractIsolation { () throws -> T in
+            return try await block()
+        } */
+        return try await runWith(act: shared, block)
+    }
 
 }
 
 actor NewActor {
     //nonisolated public var unownedExecutor: UnownedSerialExecutor { CustomExecutor.sharedDistributedUnownedExecutor }
-    nonisolated public var unownedExecutor: UnownedSerialExecutor { .sharedSampleExecutor }
+    // nonisolated public var unownedExecutor: UnownedSerialExecutor { .sharedSampleExecutor }
+    let queue = DispatchQueue(label: "NewActor")
+    nonisolated public var unownedExecutor: UnownedSerialExecutor {
+        queue.asUnownedSerialExecutor()
+    }
     private var counter_ = 0
     var counter: Int {
         counter_
@@ -604,7 +742,7 @@ extension NonCopyWithGen where T == Int {}
 
 @throwsToResult("throwing")
 @Sendable
-func closure(_ c: () async throws -> Void) async rethrows {
+nonisolated func closure(_ c: () async throws -> Void) async rethrows {
     let thread = CXX_Thread.create {
         print(Thread.current.name as Any)
         print("Help")
@@ -623,21 +761,33 @@ func closure(_ c: () async throws -> Void) async rethrows {
     try await c()
 }
 
-func extendLife(_ obj: AnyObject) {
+// compiler bug swift 6.0 to use AnyObject as argument type
+func extendLife<T: AnyObject>(_ obj: T) { 
     withExtendedLifetime(obj) { _ in }
-    _fixLifetime(obj)
+    _fixLifetime(obj)   
 }
 
-extension TaskPriority: CaseIterable {
+extension TaskPriority: @retroactive CaseIterable {
     public static var allCases: [TaskPriority] {
         [.low, .medium, .high, .utility, .userInitiated, .background]
     }
 }
 
-func returnLastExpr() -> Float {
-    let result = Float.random(in: 0...1000)
-    result
-}
+#if $ImplicitOpenExistenials || hasFeature(ImplicitOpenExistenials)
+    func takeError<E: Error>(_ error: E) {}
+
+    func passError(_ err: any Error) {
+        takeError(err)
+    }
+#endif
+
+#if $ImplicitLastExprResults || hasFeature(ImplicitLastExprResults)
+    func returnLastExpr() -> Float {
+        let result = Float.random(in: 0 ... 1000)
+        print("ImplicitLastExprResults: \(result)")
+        result
+    }
+#endif
 
 func dou() {
     do {
@@ -651,6 +801,20 @@ func dou() {
     }
 
 }
+
+@_lexicalLifetimes
+func lexy(_ c: String) {}
+
+func noInout<S>(@_nonEphemeral at pointer: UnsafeMutablePointer<S>) {}
+
+@_originallyDefinedIn(module:"foo",OSX 13.13)
+@_optimize(none)
+public func foo1() {}
+
+@_specialize(where T:_BridgeObject)
+func foo<T>(_ t: T) {}
+
+// public typealias Body = @_opaqueReturnTypeOf("Send", 0) __
 
 #if hasAttribute(retroactive) || hasFeature(RetroactiveAttribute)
 
@@ -668,8 +832,16 @@ class Moved {
     }
 }
 
+@_eagerMove
+struct EagerlyMove {}
+
+@_noEagerMove
+struct NotEagerlyMove {}
+
 @extractConstantsFromMembers
 protocol ConstantsFromMembers {}
+
+@Sendable func sendableFunc(_: Sendable...) {}
 
 struct ConstantStruct: ConstantsFromMembers {
     let foo = "foo"
@@ -677,7 +849,7 @@ struct ConstantStruct: ConstantsFromMembers {
 }
 
 struct MoveOnly: ~Copyable {
-    var name = " MoveOnly"
+    var name = "MoveOnly"
     deinit {
         print("Deinit \(name)")
     }
@@ -754,6 +926,130 @@ class ExPerson {
     var age = 0
 }
 
+func takeOnlyConst(_: _const Int) {}
+
 func existential<T>(_: T.Type) -> T.Type { T.self }
 
-func isolatedTo(_: isolated (any Actor)) async {}
+func existential(_ v: Any.Type) -> Any.Type { v }
+
+struct AnyTp: Tp {
+    init<T: Tp>(erasing: T) {}
+}
+
+@_typeEraser(AnyTp)
+protocol Tp {}
+
+protocol P {}
+
+struct ConcreteP: P, Hashable {
+    init() {}
+}
+
+func typeErased() -> some P { ConcreteP() }
+
+protocol Moving: ~Copyable {
+    init(_ value: Int32)
+    var value: Int32 { get }
+}
+
+struct Mover: ~Copyable {
+    let value: Int32
+}
+
+extension NonCopyableType: Moving {}
+
+extension Mover: Moving {
+    init(_ value: Int32) {
+        self.value = value
+    }
+}
+
+func play_withMove() {
+    var mv_ = Mover(value: 32)
+
+    var move_ = NonCopyableType(32)
+
+    // _ = move_ // consume here
+
+    // _ = mv_ // consume here
+
+    func NC<T: Moving & ~Copyable>(mv: borrowing T) {
+        print(mv.value)
+        //Task { dump(mv.value) }
+    }
+
+    func consumer<T: ~Copyable>(_ val: consuming T) {
+        _ = consume val
+    }
+
+    func inoutConsume<T: Moving & ~Copyable>(_ val: inout T) {
+        _ = consume val //consumed twice
+        val = .init(.random(in: 0...100))
+    }
+
+    NC(mv: move_)
+    NC(mv: mv_)
+
+    inoutConsume(&move_)
+    inoutConsume(&mv_)
+
+    consumer(move_)
+    consumer(mv_)
+
+    //_ = consume move_
+    //_ = consume mv_
+}
+
+/* */
+
+/* typealias ElementType = Int32
+typealias ArrayType = [ElementType]
+
+let element: ElementType = 0x1122_3344
+let headerSize = 32
+
+func isStackMemory(_ ptr: UnsafeRawPointer) -> Bool {
+    let stackBase = pthread_get_stackaddr_np(pthread_self())
+    let stackSize = pthread_get_stacksize_np(pthread_self())
+    return ptr <= stackBase && ptr >= stackBase - stackSize
+}
+
+enum MemoryType: String {
+
+    case stack = "on stack"
+    case heap = "on heap"
+    case other = "other memory (global?)"
+
+    init(_ ptr: UnsafeRawPointer) {
+        if isStackMemory(ptr) {
+            self = .stack
+        } else {
+            self = .other
+        }
+    }
+}
+
+func dumpHex(_ title: String, _ ptr: UnsafeRawPointer, _ size: Int, _ headerSize: Int = 0) {
+    var size = size
+    var ptr = ptr
+    let mallocSize = malloc_size(ptr - headerSize)
+    if mallocSize != 0 {
+        let mallocBlock = ptr - headerSize
+        print(
+            "\(title), \(mallocBlock) + \(headerSize) = \(ptr) (\(MemoryType.heap.rawValue)), size: \(headerSize) + \(mallocSize - headerSize) = \(mallocSize) -> "
+        )
+        size = mallocSize
+        ptr = mallocBlock
+    } else {
+        print("\(title), \(ptr) (\(MemoryType(ptr).rawValue)), showing size: \(size) -> ")
+    }
+    let v = ptr.assumingMemoryBound(to: UInt8.self)
+    for index in 0 ..< size {
+        if index != 0 && (index % 32) == 0 {
+            print()
+        }
+        print(String(format: "%02x ", v[index]), terminator: "")
+    }
+    print()
+}
+ */

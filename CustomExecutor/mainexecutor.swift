@@ -35,7 +35,7 @@ public final class MainExecutor: SerialExecutor, @unchecked Sendable {
 
 extension MainExecutor {
 
-    public static var shared: MainExecutor = .init()
+    public nonisolated(unsafe) static var shared: MainExecutor = .init()
 
     public static let sharedUnownedExecutor: UnownedSerialExecutor =
         UnownedSerialExecutor(ordinary: shared)

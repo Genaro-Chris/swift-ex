@@ -21,6 +21,10 @@
             AddCompletionHandlerMacro.self,
             CustomCodable.self,
             ThrowsToResult.self,
+            DTOMacro.self,
+            RemoteMacro.self,
+            TracedPreambleMacro.self,
+            UnwrapMacro.self,
         ]
     }
 #endif

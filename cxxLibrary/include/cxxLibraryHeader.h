@@ -1,12 +1,11 @@
-#include <algorithm>
 #include <iostream>
 #include "swift/bridging"
 
-// there isn't a way to include swift/bridging in c++ header file in linux yet
-
 using namespace std;
 
-void hello_world(string msg); // SWIFT_NAME(helloWorld(_:));
+#define SWIFT_MAIN_ACTOR __attribute__((swift_attr("@MainActor")))
+
+void hello_world(string msg) SWIFT_NAME(helloWorld(_:));
 
 string returns_string();
 
@@ -17,15 +16,32 @@ concept CxxExampleConcept = requires(const T &ex) {
     } -> std::same_as<float>;
 };
 
+using MainActorFuncPtr = void (*SWIFT_MAIN_ACTOR)();
+
+SWIFT_MAIN_ACTOR void main_actor_func(MainActorFuncPtr func);
+
+inline void main_actor_func(void (*SWIFT_MAIN_ACTOR func)(void))
+{
+    cout << "About to run MainActor isolaied func closure in c++\n";
+    func();
+}
+
+struct MainActorStruct
+{
+    string name;
+    void print_name() const
+    {
+        cout << name + " \n";
+    }
+} SWIFT_MAIN_ACTOR;
+
 template <typename T>
 void usesConcept(const T &value);
 
 struct ConceptUser
 {
-private:
     string Msg;
 
-public:
     ConceptUser(string msg) : Msg(msg){};
     float Print(string msg) const;
 };
@@ -42,7 +58,9 @@ public:
     ~cxx_impl_exception();
     void print();
     virtual const char *what() const noexcept;
-}; SWIFT_CONFORMS_TO_PROTOCOL(Swift.Error) SWIFT_UNCHECKED_SENDABLE;
+};
+SWIFT_CONFORMS_TO_PROTOCOL(Swift.Error)
+SWIFT_UNCHECKED_SENDABLE;
 
 struct cxx_header
 {
@@ -87,7 +105,7 @@ private:
 /// @brief  random number generator function
 /// @param min min number it can randomly generate
 /// @param max max number it can randomly generate
-/// @return the generated random numbers
+/// @return the generated random number
 auto createUniformPseudoRandomNumberGenerator(double min, double max) -> double;
 
 /// Special move function

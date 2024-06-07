@@ -13,11 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 import Distributed
-import NIO
-import NIOHTTP1
 import Foundation
+@preconcurrency import NIO
+@preconcurrency import NIOHTTP1
 
-private final class HTTPHandler: @unchecked Sendable, ChannelInboundHandler, RemovableChannelHandler {
+private final class HTTPHandler: @unchecked Sendable, ChannelInboundHandler, RemovableChannelHandler
+{
   typealias InboundIn = HTTPServerRequestPart
   typealias OutboundOut = HTTPServerResponsePart
 
@@ -76,11 +77,11 @@ private final class HTTPHandler: @unchecked Sendable, ChannelInboundHandler, Rem
       state.requestReceived()
 
     case .body(var bytes):
-      if (state == State.idle) { return }
+      if state == State.idle { return }
       messageBytes.writeBuffer(&bytes)
 
     case .end:
-      if (state == State.idle) { return }
+      if state == State.idle { return }
       onMessageComplete(context: context, messageBytes: messageBytes)
       state.requestComplete()
       messageBytes.clear()
@@ -96,9 +97,11 @@ private final class HTTPHandler: @unchecked Sendable, ChannelInboundHandler, Rem
     do {
       envelope = try decoder.decode(RemoteCallEnvelope.self, from: messageBytes)
     } catch {
-      self.system.log.error("Failed to decode \(RemoteCallEnvelope.self)", metadata: [
-        "error": "\(error)",
-      ])
+      self.system.log.error(
+        "Failed to decode \(RemoteCallEnvelope.self)",
+        metadata: [
+          "error": "\(error)"
+        ])
       self.respond500(context: context, error: error)
       return
     }
@@ -130,21 +133,23 @@ private final class HTTPHandler: @unchecked Sendable, ChannelInboundHandler, Rem
           errorString = "{\"error\"=\"\(type(of: error))\"}"
         }
 
-        responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1),
-                status: status,
-                headers: headers)
+        responseHead = HTTPResponseHead(
+          version: .init(major: 1, minor: 1),
+          status: status,
+          headers: headers)
         responseBody = ByteBuffer(string: errorString)
       case .success(let data):
-        responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1),
-                status: .ok,
-                headers: headers)
+        responseHead = HTTPResponseHead(
+          version: .init(major: 1, minor: 1),
+          status: .ok,
+          headers: headers)
         responseBody = ByteBuffer(data: data)
       }
       headers.add(name: "Content-Length", value: String(responseBody.readableBytes))
       headers.add(name: "Connection", value: "close")
       context.write(self.wrapOutboundOut(.head(responseHead)), promise: nil)
       context.write(self.wrapOutboundOut(.body(.byteBuffer(responseBody))), promise: nil)
-      context.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
+      context.write(self.wrapOutboundOut(.end(nil))).whenComplete { [context] (_: Result<Void, Error>) in
         context.close(promise: nil)
       }
       context.flush()
@@ -157,9 +162,10 @@ private final class HTTPHandler: @unchecked Sendable, ChannelInboundHandler, Rem
 
   private func respondHealthCheck(context: ChannelHandlerContext) {
     let headers = HTTPHeaders()
-    let head = HTTPResponseHead(version: .http1_1,
-            status: .ok,
-            headers: headers)
+    let head = HTTPResponseHead(
+      version: .http1_1,
+      status: .ok,
+      headers: headers)
     context.write(self.wrapOutboundOut(.head(head)), promise: nil)
     context.write(self.wrapOutboundOut(.end(nil)), promise: nil)
     context.flush()
@@ -169,9 +175,10 @@ private final class HTTPHandler: @unchecked Sendable, ChannelInboundHandler, Rem
     var headers = HTTPHeaders()
     headers.add(name: "Connection", value: "close")
     headers.add(name: "Content-Length", value: "0")
-    let head = HTTPResponseHead(version: .http1_1,
-            status: .methodNotAllowed,
-            headers: headers)
+    let head = HTTPResponseHead(
+      version: .http1_1,
+      status: .methodNotAllowed,
+      headers: headers)
     context.write(self.wrapOutboundOut(.head(head)), promise: nil)
     context.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
       context.close(promise: nil)
@@ -183,9 +190,10 @@ private final class HTTPHandler: @unchecked Sendable, ChannelInboundHandler, Rem
     var headers = HTTPHeaders()
     headers.add(name: "Connection", value: "close")
     headers.add(name: "Content-Length", value: "0")
-    let head = HTTPResponseHead(version: .http1_1,
-            status: .internalServerError,
-            headers: headers)
+    let head = HTTPResponseHead(
+      version: .http1_1,
+      status: .internalServerError,
+      headers: headers)
     context.write(self.wrapOutboundOut(.head(head)), promise: nil)
     context.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
       context.close(promise: nil)
@@ -195,10 +203,10 @@ private final class HTTPHandler: @unchecked Sendable, ChannelInboundHandler, Rem
 }
 
 /// The HTTP server acting as a front to the actor system, it handles incoming health checks and http requests which are forwared as http messages to the actor system.
-final class HTTPActorSystemServer {
+final class HTTPActorSystemServer: @unchecked Sendable {
 
   var group: EventLoopGroup
-  let system: HTTPActorSystem
+  nonisolated let system: HTTPActorSystem
 
   var channel: Channel! = nil
 
@@ -211,20 +219,20 @@ final class HTTPActorSystemServer {
     assert(channel == nil)
 
     let bootstrap = ServerBootstrap(group: group)
-            // Specify backlog and enable SO_REUSEADDR for the server itself
-            .serverChannelOption(ChannelOptions.backlog, value: 256)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+      // Specify backlog and enable SO_REUSEADDR for the server itself
+      .serverChannelOption(ChannelOptions.backlog, value: 256)
+      .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
-            // Set the handlers that are applied to the accepted Channels
-            .childChannelInitializer { channel in
-              let httpHandler = HTTPHandler(system: self.system)
-              return channel.pipeline.configureHTTPServerPipeline().flatMap {
-                channel.pipeline.addHandler(httpHandler)
-              }
-            }
+      // Set the handlers that are applied to the accepted Channels
+      .childChannelInitializer { channel in
+        let httpHandler = HTTPHandler(system: self.system)
+        return channel.pipeline.configureHTTPServerPipeline().flatMap {
+          channel.pipeline.addHandler(httpHandler)
+        }
+      }
 
-            // Enable SO_REUSEADDR for the accepted Channels
-            .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+      // Enable SO_REUSEADDR for the accepted Channels
+      .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
     channel = try bootstrap.bind(host: host, port: port).wait()
     assert(channel.localAddress != nil, "localAddress was nil!")

@@ -39,7 +39,7 @@ public final class HTTPActorSystem: DistributedActorSystem, @unchecked Sendable 
     private let group: EventLoopGroup
 
     // managed local actors
-    private var lock: Lock = Lock()
+    private let lock: Lock = Lock()
     private var reserved: Set<ActorID> = []
     private var managed: [ActorID: any DistributedActor] = [:]
 
@@ -52,17 +52,17 @@ public final class HTTPActorSystem: DistributedActorSystem, @unchecked Sendable 
     public enum Mode: Sendable {
         case server(host: String, port: Int)
         case client
-        
+
         var isServer: Bool {
             switch self {
-                case .server: return true
-                default: return false
+            case .server: return true
+            default: return false
             }
         }
         var isClient: Bool {
             switch self {
-                case .client: return true
-                default: return false
+            case .client: return true
+            default: return false
             }
         }
     }
@@ -78,31 +78,31 @@ public final class HTTPActorSystem: DistributedActorSystem, @unchecked Sendable 
         self.group = group
 
         switch mode {
-            case .client:
-                self.bindHost = "0.0.0.0"
-                self.bindPort = 0
+        case .client:
+            self.bindHost = "0.0.0.0"
+            self.bindPort = 0
 
-                var log = Logger(label: "HTTPActorSystem::Client")
-                log.logLevel = logLevel
-                self.log = log
+            var log = Logger(label: "HTTPActorSystem::Client")
+            log.logLevel = logLevel
+            self.log = log
 
-                self.client = HTTPClient(eventLoopGroupProvider: .shared(group))
-                log.info("Initialized \(Self.self) in [Client] mode")
+            self.client = HTTPClient(eventLoopGroupProvider: .shared(group))
+            log.info("Initialized \(Self.self) in [Client] mode")
 
-            case .server(let host, let port):
-                self.bindHost = host
-                self.bindPort = port
+        case .server(let host, let port):
+            self.bindHost = host
+            self.bindPort = port
 
-                var log = Logger(label: "HTTPActorSystem::Server")
-                log.logLevel = logLevel
-                self.log = log
+            var log = Logger(label: "HTTPActorSystem::Server")
+            log.logLevel = logLevel
+            self.log = log
 
-                self.client = HTTPClient(eventLoopGroupProvider: .shared(group))
-                self.server = HTTPActorSystemServer(group: group, system: self)
-                try self.server.bootstrap(host: host, port: port)
-                log.info(
-                    "Initialized \(Self.self) in [Server] mode, bound to: \(self.server.channel!.localAddress!)"
-                )
+            self.client = HTTPClient(eventLoopGroupProvider: .shared(group))
+            self.server = HTTPActorSystemServer(group: group, system: self)
+            try self.server.bootstrap(host: host, port: port)
+            log.info(
+                "Initialized \(Self.self) in [Server] mode, bound to: \(self.server.channel!.localAddress!)"
+            )
         }
     }
 
@@ -211,7 +211,7 @@ public final class HTTPActorSystem: DistributedActorSystem, @unchecked Sendable 
 
         let response = try await sendEnvelopeRequest(invocation, target: target, to: actor.id)
 
-        guard 200 ..< 300 ~= response.status.code else {
+        guard 200..<300 ~= response.status.code else {
             log.debug("Bad status code: \(response.status.code)")
             throw HTTPActorSystemError.badStatusCode(code: response.status.code)
         }

@@ -30,13 +30,13 @@ public struct HTTPInvocationEncoder: DistributedTargetInvocationEncoder {
     }
 
     public mutating func recordErrorType<E: Error>(_ type: E.Type) throws {
-        self.throwing = true  
+        self.throwing = true
         if let name = _mangledTypeName(E.self) {
             self.errorValue = name
         }
     }
 
-    public mutating func recordReturnType<R: SerializationRequirement>(_ type: R.Type) throws {        
+    public mutating func recordReturnType<R: SerializationRequirement>(_ type: R.Type) throws {
         if let name = _mangledTypeName(R.self) {
             returnValue = name
         }

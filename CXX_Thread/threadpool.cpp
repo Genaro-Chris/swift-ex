@@ -4,28 +4,28 @@
 auto make_thread_handler(TaskQueueForPool &queue)
 {
     return thread{[&queue]()
-                   {
-                       while (true)
-                       {
-                           auto const elem = queue.dequeue();
-                           if (elem.has_value())
-                           {
-                               auto const element = (*elem);
-                               switch (element.type)
-                               {
-                               case TaskTypeForPool::Execute:
-                                   element.task();
-                                   break;
+                  {
+                      while (true)
+                      {
+                          auto const elem = queue.dequeue();
+                          if (elem.has_value())
+                          {
+                              auto const element = (*elem);
+                              switch (element.type)
+                              {
+                              case TaskTypeForPool::Execute:
+                                  element.task();
+                                  break;
 
-                               case TaskTypeForPool::Stop:
-                                   return;
-                               }
-                           }
-                       }
-                   }};
+                              case TaskTypeForPool::Stop:
+                                  return;
+                              }
+                          }
+                      }
+                  }};
 }
 
-ThreadPool::ThreadPool(uint count)
+CXX_ThreadPool::CXX_ThreadPool(uint count)
 {
     if (count == 0)
     {
@@ -33,18 +33,18 @@ ThreadPool::ThreadPool(uint count)
     }
     threads.reserve(count);
     thread_count = count;
-        for (int i = 0; i < count; i++)
-        {
-            threads.push_back(make_thread_handler(queue));
-        }
+    for (int i = 0; i < count; i++)
+    {
+        threads.push_back(make_thread_handler(queue));
+    }
 }
 
-void ThreadPool::submit(Task_Pool task)
+void CXX_ThreadPool::submit(Task_Pool task)
 {
     queue << task;
 }
 
-ThreadPool::~ThreadPool()
+CXX_ThreadPool::~CXX_ThreadPool()
 {
     Task_Pool const stop_task{TaskTypeForPool::Stop, {}};
     for (size_t i = 0; i < threads.size(); i++)
@@ -65,7 +65,7 @@ ThreadPool::~ThreadPool()
     }
 }
 
-void ThreadPool::submitTaskWithExecutor(const void *_Nonnull job, const void *_Nonnull executor, void (*_Nonnull callback)(void const *_Nonnull job, void const *_Nonnull executor))
+void CXX_ThreadPool::submitTaskWithExecutor(const void *_Nonnull job, const void *_Nonnull executor, void (*_Nonnull callback)(void const *_Nonnull job, void const *_Nonnull executor))
 {
     queue << Task_Pool{TaskTypeForPool::Execute, [callback, job, executor]()
                        {
@@ -73,7 +73,7 @@ void ThreadPool::submitTaskWithExecutor(const void *_Nonnull job, const void *_N
                        }};
 }
 
-void ThreadPool::submit(const void *value, void (*_Nonnull callback)(void const *value))
+void CXX_ThreadPool::submit(const void *value, void (*_Nonnull callback)(void const *value))
 {
     queue << Task_Pool{TaskTypeForPool::Execute, [callback, value]()
                        {
@@ -81,12 +81,12 @@ void ThreadPool::submit(const void *value, void (*_Nonnull callback)(void const 
                        }};
 }
 
-ThreadPool *ThreadPool::create(uint count)
+CXX_ThreadPool *CXX_ThreadPool::create(uint count)
 {
-    return new ThreadPool(count);
+    return new CXX_ThreadPool(count);
 }
 
-void ThreadPool::submit(TaskFuncPtr f)
+void CXX_ThreadPool::submit(TaskFuncPtr f)
 {
     queue << Task_Pool{TaskTypeForPool::Execute, [f]()
                        {
@@ -94,9 +94,19 @@ void ThreadPool::submit(TaskFuncPtr f)
                        }};
 }
 
+static auto pool = new CXX_ThreadPool{CPU_Count};
+
+CXX_ThreadPool *_Nonnull CXX_ThreadPool::getGlobalPool()
+{
+    pool->addref();
+    return pool;
+}
+
 string getThreadID()
 {
+    
     ostringstream ss;
     ss << "#" << this_thread::get_id();
-    return ss.str();
+    auto d = ss.str();
+    return d;
 }

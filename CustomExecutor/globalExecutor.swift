@@ -4,17 +4,22 @@ import ThreadPool
 /// Example of a custom Executor of an actor
 public final class CustomGlobalExecutor: SerialExecutor, @unchecked Sendable {
 
-    @_hasStorage private var jobQueue: JobQueue<UnownedJob> {
+    @_hasStorage private var jobQueue: JobQueue<UnownedJob> = .init()
+    /*
+    // <unknown>:0: error: circular reference
+    // <unknown>:0: note: through reference here
+    // swift 6.0
+     {
         JobQueue()
     }
 
     public init() {
         jobQueue = JobQueue()
-    }
+    } */
 
     //private let threadpool = ThreadPool.create(CPU_Count)
 
-    private let pool = ThreadPool(count: Int(CPU_Count))
+    private let pool = WorkerPool(count: Int(CPU_Count))
 
     public func enqueue(_ job: consuming ExecutorJob) {
         jobQueue <- UnownedJob(job)
@@ -42,32 +47,29 @@ public final class CustomGlobalExecutor: SerialExecutor, @unchecked Sendable {
 }
 
 extension CustomGlobalExecutor {
-
-    public static let shared: CustomGlobalExecutor = .init()
-
-    public static var sharedUnownedExecutor: UnownedSerialExecutor =
-        UnownedSerialExecutor(ordinary: shared)
-
+    public static let sharedG: CustomGlobalExecutor = .init()
 }
 
 extension UnownedSerialExecutor {
-    public static let sharedGlobalExecutor = CustomGlobalExecutor()
-
-    public static let generic: Self =
-        sharedGlobalExecutor.asUnownedSerialExecutor()
+    public static let generic: UnownedSerialExecutor =
+        UnownedSerialExecutor(ordinary: CustomGlobalExecutor.sharedG)
 }
 
+extension UnownedTaskExecutor {
+    nonisolated(unsafe) static var genericTask =
+        CustomGlobalExecutor.sharedG.asUnownedTaskExecutor()
+}
 
-extension CustomGlobalExecutor: _TaskExecutor {
-    @_implements(_TaskExecutor,enqueue)
+extension CustomGlobalExecutor: TaskExecutor {
+    @_implements(TaskExecutor,enqueue)
     public func enqueueTask(_ job: consuming ExecutorJob) {
         jobQueue <- UnownedJob(job)
-        
+
         pool?.submit { [weak self] in
             guard let self else {
                 return
             }
-            (<-jobQueue)?.runSynchronously(on: .generic)
+            (<-jobQueue)?.runSynchronously(on: .genericTask)
         }
     }
 

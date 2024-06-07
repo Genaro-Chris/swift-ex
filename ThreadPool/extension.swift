@@ -1,9 +1,6 @@
-extension ThreadSafeQueue<QueueOperation>: Sequence, IteratorProtocol {
+extension ThreadSafeQueue: Sequence, IteratorProtocol {
 
-    public func next() -> QueueOperation? {
-        guard let value = <-self else {
-            return .notYet
-        }
-        return value
+    public func next() -> Element? {
+        <-self
     }
 }

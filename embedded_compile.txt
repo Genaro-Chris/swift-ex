@@ -1,0 +1,13 @@
+swift build --product EmbeddedEx -Xswiftc='-target' -Xswiftc='x86_64-unknown-linux-gnu' -Xswiftc='-o' -Xswiftc='embedded'
+swiftc file.swift -enable-experimental-feature Embedded -wmo
+swiftc ./ex.swift -target x86_64-unknown-linux-gnu -o embedded -wmo
+refer to https://github.com/apple/swift/blob/main/docs/EmbeddedSwift/UserManual.md
+
+#for swift on wasm
+swiftc ./ex.swift -target wasm64-unknown-none-wasm -o embedded.o -wmo -enable-experimental-feature Embedded -Osize -Xcc -fdeclspec -disable-cmo -Xfrontend -gnone -Xclang-linker -nostdlib -Xlinker --no-entry
+
+
+#efficient
+swiftc -Osize -Xcc -fdeclspec -disable-cmo -Xfrontend -gnone -Xclang-linker -nostdlib -target wasm64-unknown-none-wasm -enable-experimental-feature Extern -enable-experimental-feature Embedded -wmo ex.swift -c -o embedded.o
+#no stack protector
+swiftc -Osize -Xcc -fdeclspec -disable-cmo -Xfrontend -gnone -Xclang-linker -nostdlib -Xfrontend -disable-stack-protector -target wasm64-unknown-none-wasm -enable-experimental-feature Extern -enable-experimental-feature Embedded -wmo ex.swift -c -o embedded.o

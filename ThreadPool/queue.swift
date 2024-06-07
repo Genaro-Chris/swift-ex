@@ -28,7 +28,7 @@ public class ThreadSafeQueue<Element>: @unchecked Sendable {
     ///
     /// - Parameter item:
     public func enqueue(_ item: Element) {
-        lock.withLock {
+        lock.whileLocked {
             buffer.append(item)
         }
     }
@@ -36,7 +36,7 @@ public class ThreadSafeQueue<Element>: @unchecked Sendable {
     ///
     /// - Returns:
     public func dequeue() -> Element? {
-        return lock.withLock {
+        return lock.whileLocked {
             guard !buffer.isEmpty else {
                 return nil
             }

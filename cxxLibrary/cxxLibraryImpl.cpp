@@ -1,5 +1,4 @@
-#include "cxxLibraryHeader.h"
-#include <concepts>
+#include "include/cxxLibraryHeader.h"
 #include <iostream>
 #include <random>
 #include <functional>
@@ -49,14 +48,18 @@ string returns_string()
 template <>
 void usesConcept(const ConceptUser &value)
 {
-    usesConcept(value);
+    // segfault error in swift 6
+    // usesConcept(value);
+    value.Print(value.Msg);
 }
 
 // Sometimes this is needed
 template <>
 void usesConcept(const string &value)
 {
-    usesConcept(value);
+    // segfault error in swift 6
+    // usesConcept(value);
+    hello_world(value);
 }
 
 template <CxxExampleConcept T>

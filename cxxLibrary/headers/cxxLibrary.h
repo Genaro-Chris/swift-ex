@@ -8,6 +8,27 @@
 
 using namespace std;
 
+using TaskFuncPtr = void (*)();
+
+#define SWIFT_MAIN_ACTOR __attribute__((swift_attr("@MainActor")))
+
+SWIFT_MAIN_ACTOR void main_actor_func(void(*SWIFT_MAIN_ACTOR func));
+
+inline void main_actor_func(void (*func)(void))
+{
+    cout << "About to run MainActor isolaied func closure in c++ ";
+    func();
+}
+
+struct MainActorStruct
+{
+    string name;
+    void print_name() const {
+        cout << name + " ";
+    }
+} SWIFT_MAIN_ACTOR;
+
+
 template <typename T>
 concept CxxExampleConcept = requires(const T &ex) {
     {
@@ -22,7 +43,7 @@ void usesConcept(const T &value)
     cout << "Called usesConcept function with instance of type " << type_name << endl;
 }
 
-struct ConceptUser
+struct __attribute__((swift_attr("@MainActor"))) ConceptUser
 {
 private:
     string Msg;
@@ -77,7 +98,9 @@ public:
     {
         return this->Msg.c_str();
     }
-}; SWIFT_CONFORMS_TO_PROTOCOL(Swift.Error) SWIFT_UNCHECKED_SENDABLE;
+};
+SWIFT_CONFORMS_TO_PROTOCOL(Swift.Error)
+SWIFT_UNCHECKED_SENDABLE;
 
 struct cxx_header
 {
@@ -193,22 +216,22 @@ private:
     int m_value;
 };
 
-class MoveOnlyType
+class MoveOnlyType_
 {
 public:
-    MoveOnlyType() : m_value{1} {}                                            // Default constructor
-    MoveOnlyType(int m_value) : m_value{m_value} {}                           // constructor
-    MoveOnlyType(const MoveOnlyType &sp) = delete;                            // Copy constructor
-    MoveOnlyType(MoveOnlyType &&sp) noexcept : m_value{std::move(sp.m_value)} // Move constructor
+    MoveOnlyType_() : m_value{1} {}                                            // Default constructor
+    MoveOnlyType_(int m_value) : m_value{m_value} {}                           // constructor
+    MoveOnlyType_(const MoveOnlyType_ &sp) = delete;                            // Copy constructor
+    MoveOnlyType_(MoveOnlyType_ &&sp) noexcept : m_value{std::move(sp.m_value)} // Move constructor
     {
         cout << "this move cstor called" << endl;
     }
-    ~MoveOnlyType() // Destructor (implicitly noexcept)
+    ~MoveOnlyType_() // Destructor (implicitly noexcept)
     {
         cout << "this destructor" << endl;
     }
-    MoveOnlyType &operator=(const MoveOnlyType &sp) = delete; // Copy assignment operator
-    MoveOnlyType &operator=(MoveOnlyType &&sp) noexcept       // Move assignment operator
+    MoveOnlyType_ &operator=(const MoveOnlyType_ &sp) = delete; // Copy assignment operator
+    MoveOnlyType_ &operator=(MoveOnlyType_ &&sp) noexcept       // Move assignment operator
     {
         m_value = std::move(sp.m_value);
         return *this;

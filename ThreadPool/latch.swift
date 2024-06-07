@@ -17,7 +17,7 @@ public class Latch: @unchecked Sendable {
 
     ///
     public func decrementAndWait() {
-        mutex.withLock {
+        mutex.whileLocked {
             blockedThreadIndex -= 1
             guard blockedThreadIndex == 0 else {
                 condition.wait(

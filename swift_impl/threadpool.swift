@@ -3,7 +3,7 @@ import _Backtracing
 
 public class TSPool: @unchecked Sendable {
 
-    private let queue = TSQueue<() -> Void>()
+    private let queue = STSQueue<() -> Void>()
 
     private let count: UInt
 
@@ -12,7 +12,7 @@ public class TSPool: @unchecked Sendable {
     fileprivate var threadHandles: [Thread] {
         var threadpool = [Thread]()
         threadpool.reserveCapacity(Int(count))
-        for _ in 0 ..< count {
+        for _ in 0..<count {
             threadpool.append(
                 Thread { [weak self] in
                     guard let self else {
@@ -20,15 +20,16 @@ public class TSPool: @unchecked Sendable {
                     }
                     for op in queue {
                         switch op {
-                            case let .ready(work): work()
+                        case let .ready(work): work()
 
-                            default: continue
-
+                        default:
+                            Thread.yield()
+                            continue
                         }
                     }
 
                     while case let .some(op) = queue.next(),
-                        case let TSQueue<() -> Void>.QueueOp.ready(work) = op
+                        case let STSQueue<() -> Void>.QueueOp.ready(work) = op
                     {
                         work()
                     }
@@ -55,7 +56,7 @@ public class TSPool: @unchecked Sendable {
     }
 
     deinit {
-        for _ in 0 ..< count {
+        for _ in 0..<count {
             queue.cancel()
         }
         threadHandles.forEach { handle in
@@ -67,7 +68,7 @@ public class TSPool: @unchecked Sendable {
 func captureBackTrace() throws {
     let capture = try _Backtracing.Backtrace.capture(
         algorithm: .auto, limit: 30, offset: 0, top: 100)
-        print(capture)
+    print(capture)
 }
 
 public final class SingleTSPool: @unchecked Sendable {
@@ -76,7 +77,7 @@ public final class SingleTSPool: @unchecked Sendable {
 
     public init() {}
 
-    let queue = TSQueue<() -> Void>()
+    let queue = STSQueue<() -> Void>()
 
     var threadHandle: Thread {
         Thread { [weak self] in
@@ -85,9 +86,9 @@ public final class SingleTSPool: @unchecked Sendable {
             }
             for op in queue {
                 switch op {
-                    case let .ready(work): work()
+                case let .ready(work): work()
 
-                    default: continue
+                default: continue
 
                 }
             }

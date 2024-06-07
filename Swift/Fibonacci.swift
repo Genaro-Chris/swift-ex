@@ -1,12 +1,4 @@
-import CXX_Thread
 import SwiftWithCXX
-/*
-See the LICENSE.txt file for this sample’s licensing information.
-
-Abstract:
-Implements the Swift API.
-*/
-import cxxLibrary
 
 public typealias Signal = @convention(c) () -> Void
 
@@ -45,7 +37,25 @@ public struct FibonacciCalculator {
 public protocol SwiftProtocol {}
 
 @_expose(Cxx)
-public actor Hello {}
+public struct SwiftToCXXStruct {
+    @_expose(Cxx)
+    public var x = 0
+    @_expose(Cxx)
+    public mutating func set(x: Int) -> Int {
+        let y = self.x
+        self.x = x
+        return y
+    }
+}
+
+public func returnSwiftToCXXStruct(x: Int = 0) -> SwiftToCXXStruct {
+    return SwiftToCXXStruct(x: x)
+}
+
+public actor Hello {
+    init() {}
+    var helloCount = 5
+}
 
 @_extern(c, "cxx_fuck")
 public func fuck()

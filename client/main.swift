@@ -1,8 +1,8 @@
-import CustomExecutor
 import Distributed
 import DistributedHTTPActorSystem
 import Foundation
 import SignalHandler
+import shared
 
 let client = try Client()
 
@@ -25,53 +25,65 @@ Task.detached {
 }
 
 try await server.join_with_id(id: client.actorId, client)
+try await server.welcome(id: client.actorId)
 
 print("List of other clients of connected")
 
-while let input = readLine() {
+LOOP: while let input = readLine() {
     switch input {
-        case "exit", "Exit":
-            try await client.close(server: server)
-            break
-        case "interact":
-            guard let input = Int(readLine() ?? "0") else {
-                continue
-            }
-            let newId = try await server.prung_id().filter { id in
-                id != client.id
-            }[input]
-            let newclient = try Client.resolve(
-                id: newId,
-                using: client.actorSystem)
-            let newid = try await newclient.print_id()
-            print("New Client got back \(newid)")
+    case "exit", "Exit":
+        break LOOP
+    case "interact":
+        guard let input = Int(readLine() ?? "0") else {
+            continue
+        }
+        let newId = try await server.prung_id().filter { id in
+            id != client.id
+        }[input]
+        let newclient = try Client.resolve(
+            id: newId,
+            using: client.actorSystem)
+        let newid = try await newclient.print_id()
+        print("New Client got back \(newid)")
 
-        default:
+    default:
+        var ID = HTTPActorSystem.ActorID.random(host: "default", port: 90, path: "/")
+        do {
             let list = try await server.prung_id()
                 .filter { id in
                     id != client.id
                 }
             for (index, id) in list.enumerated() {
                 debugPrint("Index \(index)", id)
-                do {
-                    let newactor = try Client.resolve(id: id, using: client.actorSystem)
+
+                let newactor = try Client.resolve(id: id, using: client.actorSystem)
+                await newactor.whenLocal { client in
+                    client.executeBody { id in
+                        print("About to work on the \(newactor) side")
+                        print("\(id)")
+                    }
+                }
+                #if swift(<6) && compiler(<6)
                     try await newactor.execute { id in
                         print("About to work on the \(newactor) side")
                         print("\(id)")
-
                     }
-                } catch let error as HTTPActorSystemError {
-                    switch error {
-
-                        case .actorNotFound(id): print("No actor found with id \(id)")
-
-                        default: print("Other error")
-
-                    }
-                } catch {
-                    print("Failed with \(error)")
-                }
+                #endif
+                ID = newactor.id
             }
+        } catch let error as HTTPActorSystemError {
+            switch error {
+
+            case .actorNotFound(ID): print("No actor found with id \(ID)")
+
+            default: print("Other error")
+
+            }
+            break LOOP
+        } catch {
+            print("Failed with \(type(of: error))")
+            break LOOP
+        }
     }
 
 }

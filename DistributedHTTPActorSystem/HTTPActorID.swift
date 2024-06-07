@@ -3,8 +3,8 @@ import Foundation
 extension HTTPActorSystem {
     public struct ActorID: Sendable, Codable, Hashable, CustomStringConvertible {
         let `protocol`: String
-        public var host: String
-        public var port: Int
+        public let host: String
+        public let port: Int
         public let path: String
         let uuid: UUID
 

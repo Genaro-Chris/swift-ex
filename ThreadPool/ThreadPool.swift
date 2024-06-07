@@ -1,9 +1,11 @@
 import Foundation
 
+typealias Tasks = () -> Void
+
 ///
 public final class ThreadPool: @unchecked Sendable {
 
-    private let queue: ThreadSafeQueue<QueueOperation>
+    private let queue: Channel<Tasks>
 
     private let count: Int
 
@@ -28,15 +30,17 @@ public final class ThreadPool: @unchecked Sendable {
         }
         self.count = count
         self.wait = waitType
-        self.queue = ThreadSafeQueue()
+        self.queue = Channel()
         self.barrier = Barrier(value: count + 1)!
-        self.threadHandles = start(queue: queue, count: count, barrier: barrier)
+        self.threadHandles = start(queue: queue, count: count)
     }
+
+    public static let globalPool = ThreadPool(count: ProcessInfo.processInfo.activeProcessorCount, waitType: .waitForAll)!
 
     ///
     /// - Parameter body:
     public func submit(_ body: @escaping () -> Void) {
-        queue <- .ready(element: body)
+        queue <- body
     }
 
     private func end() {
@@ -45,7 +49,9 @@ public final class ThreadPool: @unchecked Sendable {
 
     private func waitForAll() {
         (0 ..< count).forEach { _ in
-            queue <- .wait
+            queue <-  { [barrier] in
+                barrier.arriveAndWait()
+            }
         }
         barrier.arriveAndWait()
     }
@@ -62,22 +68,14 @@ public final class ThreadPool: @unchecked Sendable {
 }
 
 private func start(
-    queue: ThreadSafeQueue<QueueOperation>, count: Int, barrier: Barrier
-) -> [Thread] {
+    queue: Channel<Tasks>, count: Int) -> [Thread] {
     let threadHandles = (0 ..< count).map { _ in
         Thread {
-            while let op = queue.next() {
-                switch (op, Thread.current.isCancelled) {
-                    case let (.ready(work), false): work()
-                    case (.ready(_), true): return
-                    case (.wait, _):
-                        barrier.arriveAndWait()
-                    case (.notYet, false): continue
-                    case (.notYet, true): return
-                }
+            for op in queue where !Thread.current.isCancelled {
+                op()
             }
         }
     }
-    threadHandles.forEach { $0.start() }
+    threadHandles.forEach { $0.name = "Pool"; $0.start() }
     return threadHandles
 }

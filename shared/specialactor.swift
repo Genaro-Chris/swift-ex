@@ -1,14 +1,14 @@
-@_exported import Distributed
-import DistributedHTTPActorSystem
+@_implementationOnly import Distributed
+/* public */ import DistributedHTTPActorSystem
 import Foundation
 
 @dynamicMemberLookup
 public protocol SpecialActor: DistributedActor, Codable {
-    subscript<T>(dynamicMember member: ReferenceWritableKeyPath<Self, T>) -> T { get set }
+    subscript<T: Sendable>(dynamicMember member: ReferenceWritableKeyPath<Self, T>) -> T { get set }
 }
 
 extension SpecialActor {
-    public subscript<T>(dynamicMember member: ReferenceWritableKeyPath<Self, T>) -> T {
+    public subscript<T: Sendable>(dynamicMember member: ReferenceWritableKeyPath<Self, T>) -> T {
         get {
             print("Called get")
             return self[keyPath: member]
@@ -28,9 +28,11 @@ extension SpecialActor {
         print("Health check for \(self.id)")
     }
 
-    public distributed func execute(body: (ID) -> Void) {
-        body(self.id)
-    }
+    #if swift(<6) && compiler(<6)
+        public distributed func execute(body: (ID) -> Void) {
+            body(self.id)
+        }
+    #endif
 }
 
 public protocol ServerActor: DistributedActor {
