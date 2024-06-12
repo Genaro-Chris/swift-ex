@@ -1,9 +1,9 @@
-import CXX_Thread
-import CustomExecutor
+@preconcurrency import CXX_Thread
+internal import CustomExecutor
 import Foundation
 import Hook
 import Interface
-import SwiftBridging
+// import SwiftBridging
 // import Observation
 import SwiftWithCXX
 import _Differentiation
@@ -77,6 +77,8 @@ enum Program {
 
         task.cancel()
 
+        printMem(CustomActor.self)
+
         try await Task.sleep(for: .seconds(2))
 
         print(getThreadID())
@@ -99,7 +101,7 @@ enum Program {
             }
         #endif
 
-        var model = Perceptron()  // (weight: SIMD2<Float>.init(x: 1, y: 2), bias: 4.7)
+        var model = Perceptron(weight: SIMD2<Float>.init(x: 1, y: 2), bias: 4.7)
         let andGateData: [(x: SIMD2<Float>, y: Float)] = [
             (x: [0, 0], y: 0),
             (x: [0, 1], y: 0),
@@ -124,14 +126,14 @@ enum Program {
 
         do {
             let pool = CXX_ThreadPool.create(4)
-            for _ in 1...20 {
+            for _ in 1...3 {
                 pool.submit {
                     print(
                         "ThreadPool \(Thread.current.name ?? "Unknown") with id \(Thread.current.id) and description \(Thread.current.description)"
                     )
                 }
             }
-            Thread.sleep(forTimeInterval: 4)
+            pool.waitForAll()
         }
 
         Task { nonisolated in
@@ -169,12 +171,12 @@ enum Program {
 
         print(try await task1.value)
 
-        let v = V< >()
+        let v = V< >() // : V<>
 
         print(v, type(of: v))
 
         forValueType(value: 122)
-        //forValueType(value: ThreadPool.create(2))
+        //forValueType(value: ThreadPool(2))
 
         _ = product(b: 123)
 
@@ -229,6 +231,20 @@ enum Program {
 
             print("Person2 \(person2)")
         }
+
+        _const let onlyConst = 0
+
+        _ = SensitiveStruct()
+
+        // takeOnlyConst(onlyConst) // expect a compile-time constant literal
+
+        let subscripter = SubscriptClass()
+
+        _ = subscripter[]
+        let _: Int = SubscriptClass[]
+        let _: Float = SubscriptClass[]
+
+        takeOnlyConst(12)
 
         /*
         // compiler bug because ~Copyable & @dynamicCallable is a bug
@@ -288,20 +304,23 @@ enum Program {
 
         }
 
-        
+        print("Function / Body Macros")
+
+        aboutToTrace()
+
+        _ = try await f(a: 3, b: "f")
+
+        print("Function / Body Macros end")
 
         /* CustomGlobalExecutor.sharedG.submit {
             print("\(Thread.current.name ?? "unknown")")
         } */
 
 
-        // <unknown>:0: error: circular reference
-        // <unknown>:0: note: through reference here
-        // swift 6.0
         let wg = DispatchGroup()
         wg.enter()
         let un = Unmanaged.passUnretained(wg)
-        CXX_ThreadPool.create(1).submit(un.toOpaque()) { wG in
+        handleG.submit(un.toOpaque()) { wG in
             ThreadPool.globalPool.submit {
                 print("Using Unmanaged")
                 print("\(Thread.current.name ?? "unknown")")
@@ -311,7 +330,9 @@ enum Program {
             
         }
 
-        wg.wait()
+        //wg.wait()
+
+        handleG.waitForAll()
         
         Task.detached {  // @MainActor in
             if _taskIsOnExecutor(CustomGlobalExecutor.sharedG) {
@@ -387,7 +408,7 @@ enum Program {
             var value = 123.5
             let val = special_move(&value)
             print(val.pointee)
-            //_ = consume value
+            _ = consume value
         }
 
         let new_val = special_move(&user)
@@ -451,7 +472,10 @@ enum Program {
 
         _ = consume moved
 
-        /*  */var list: List<String> = .init()
+        /* 
+        // compiler bug 
+        // swift 6
+         var list: List<String> = .init()
         list.push("one")
         list.push("two")
 
@@ -490,7 +514,13 @@ enum Program {
                 case .two: ()
                 case .three(let borrowing y): y.borrowingfunc()
             }
-        #endif
+        #endif */
+
+        playWith()
+
+        // Conditional Copyability
+        print("Conditional Copyability")
+        playWithCopy()
 
         let pType = Person.self
 
@@ -513,9 +543,9 @@ enum Program {
         measure("CXX_ThreadPool_globalPool_Wait_Unret") { _ in
             let group = WaitGroup()
             let grp = Unmanaged.passUnretained(group).toOpaque()
-            for _ in 1...1_000 {
+            for _ in 1...1_000_000 {
                 group.enter()
-                CXX_ThreadPool.getGlobalPool().submit(grp) { grp in
+                CXX_ThreadPool.globalPool.submit(grp) { grp in
                     Unmanaged<WaitGroup>.fromOpaque(grp).takeUnretainedValue().done()
                 }
             }
@@ -525,9 +555,9 @@ enum Program {
         measure("CXX_ThreadPool_globalPool_Wait_Ret") { _ in
             let group = WaitGroup()
             let grp = Unmanaged.passRetained(group).toOpaque()
-            for _ in 1...1_000 {
+            for _ in 1...1_000_000 {
                 group.enter()
-                CXX_ThreadPool.getGlobalPool().submit(grp) { grp in
+                CXX_ThreadPool.globalPool.submit(grp) { grp in
                     Unmanaged<WaitGroup>.fromOpaque(grp).retain().takeRetainedValue().done()
                 }
             }

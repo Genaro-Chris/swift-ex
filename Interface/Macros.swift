@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-@_exported import Implementation
 
 @attached(peer, names: suffixed(_throws))
 public macro throwsToResult(_ name: StaticString) =
@@ -20,7 +19,7 @@ public macro throwsToResult(_ name: StaticString) =
 /// Adds a "completionHandler" variant of an async function, which creates a new
 /// task , calls the original async function, and delivers its result to the completion
 /// handler.
-@attached(peer, names: overloaded)
+@attached(peer, names:  arbitrary)// overloaded) // old
 public macro AddCompletionHandler(_ completionName: String = "CompletionHandler") =
     #externalMacro(module: "Implementation", type: "AddCompletionHandlerMacro")
 

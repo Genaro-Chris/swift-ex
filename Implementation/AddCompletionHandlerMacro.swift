@@ -12,7 +12,6 @@
 
 import SwiftDiagnostics
 import SwiftSyntax
-import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
 public struct AddCompletionHandlerMacro: PeerMacro {
@@ -41,6 +40,7 @@ public struct AddCompletionHandlerMacro: PeerMacro {
 
             let newSignature = funcDecl.signature.with(\.effectSpecifiers, newEffects)
             let messageID = MessageID(domain: "MacroExamples", id: "MissingAsync")
+
             let diag = Diagnostic(
                 // Where the error should go (on the "+").
                 node: Syntax(funcDecl.funcKeyword),
@@ -79,19 +79,19 @@ public struct AddCompletionHandlerMacro: PeerMacro {
 
         guard case let .argumentList(arguments) = node.arguments,
             let firstElement = arguments.first,
-            let first_Name = firstElement.expression.as(StringLiteralExprSyntax.self),
-            case let .stringSegment(segments) = first_Name.segments.first
+            let first_Name = firstElement.expression.as(StringLiteralExprSyntax.self), 
+			case let .stringSegment(segments) = first_Name.segments.first
         else {
             throw CustomError.message("@addCompletionHandler arguments error")
         }
 
-        let firstName = TokenSyntax.init(stringLiteral: segments.content.text.lowercased())  //localizedLowercase)
+        let firstName = TokenSyntax.init(stringLiteral: segments.content.text.localizedLowercase)
 
         let completionHandlerParam =
             FunctionParameterSyntax(
                 firstName: firstName,
                 colon: .colonToken(trailingTrivia: .space),
-                type: "@escaping (\(resultType ?? "")) -> Void" as TypeSyntax
+                type: "@Sendable @escaping (\(resultType ?? "")) -> Void" as TypeSyntax
             )
 
         // Add the completion handler parameter to the parameter list.
@@ -125,13 +125,22 @@ public struct AddCompletionHandlerMacro: PeerMacro {
         let call: ExprSyntax =
             "\(funcDecl.name)(\(raw: callArguments.joined(separator: ", ")))"
 
+        let value: TypeSyntax = if let resultType {
+            "var value: \(resultType)"
+        } else { "" }
+
+        let structName = "Caller\(context.makeUniqueName("raw"))"
+
         // FIXME: We should make CodeBlockSyntax ExpressibleByStringInterpolation,
         // so that the full body could go here.
         let newBody: ExprSyntax =
             """
 
               Task {
-                 \(raw: firstName)(await \(call))
+                 let caller = \(raw: structName)(value: await \(call), clos: \(raw: firstName))
+                 await caller()
+                 // await caller.clos(caller.value)
+                 // \(raw: firstName)(await \(call))
               }
 
             """
@@ -177,6 +186,14 @@ public struct AddCompletionHandlerMacro: PeerMacro {
             .with(\.attributes, newAttributeList)
             .with(\.leadingTrivia, .newlines(2))
 
-        return [DeclSyntax(newFunc)]
+        return [DeclSyntax("""
+                    fileprivate struct \(raw: structName): @unchecked Sendable { 
+                        \(value)
+                        let clos: (\(raw: resultType ?? "")) async -> Void
+                        func callAsFunction() async {
+                            await clos(self.value)
+                        }
+                    }
+        """), DeclSyntax(newFunc)]
     }
 }

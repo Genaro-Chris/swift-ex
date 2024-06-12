@@ -1,7 +1,7 @@
 import CXX_Thread
-import CustomExecutor
+internal import CustomExecutor
 import Foundation
-import Interface
+@_exported import Interface
 // import Observation
 import SwiftLib
 import SwiftWithCXX
@@ -86,11 +86,11 @@ struct Perceptron: Differentiable {
 
 extension Thread {
     var id: String {
-        "\(getThreadID())"
+        // "\(getThreadID())"
         // <unknown>:0: error: circular reference
         // <unknown>:0: note: through reference here
-        // swift 6.0
-        // String(getThreadID())
+        // swift 6.0 debug build
+        String(getThreadID())
     }
 }
 
@@ -643,6 +643,75 @@ extension DispatchQueue: @retroactive SerialExecutor, @unchecked @retroactive Se
     }
 }
 
+func playWith() {
+    var list: List<String> = .init()
+        list.push("one")
+        list.push("two")
+
+        var listlist: List<List<String>> = .init()
+        listlist.push(list)
+        // list.push("three")  // now forbidden, list was consumed
+        list = listlist.pop()!  // but if we move it back out...
+        list.push("three")  // this is allowed again
+
+        list.forEach { element in
+            print(element, terminator: ", ")
+        }
+        // prints "three, two, one, "
+        print()
+        while let element = list.pop() {
+            print(element, terminator: ", ")
+        }
+        // prints "three, two, one, "
+        print()
+
+        
+
+        var nce = NonCopyableEnum.one  // must be var not let else compiler crashes
+        switch consume nce {
+            case .one: ()
+            case .two: ()
+            case .three(let y): y.consumingfunc()
+        }
+
+        nce = .two
+
+        #if $BorrowingSwitch || hasFeature(BorrowingSwitch)
+            let nc = NonCopyEnum.one
+            switch /* _borrowing */ nc {
+                case .one: ()
+                case .two: ()
+                case .three(let borrowing y): y.borrowingfunc()
+            }
+        #endif
+}
+
+func playWithCopy() {
+    // compiler bug 
+    // swift 6
+    var list1: ListCopy<MoveOnlyStruct<String>> = .init()
+    list1.push(.init("one_copy"))
+    list1.push(.init("two_copy"))
+
+    var listlist1: ListCopy<ListCopy<MoveOnlyStruct<String>>> = .init()
+    listlist1.push(list1)
+    // list.push("three_copy")  // now forbidden, list was consumed
+    list1 = listlist1.pop()!  // but if we move it back out...
+    list1.push(.init("three_copy"))  // this is allowed again
+
+    list1.forEach { element in
+        print(element.description, terminator: ", ")
+    }
+        // prints "three_copy, two_copy, one_copy, "
+    print()
+    while let element = list1.pop() {
+        print(element.description, terminator: ", ")
+    }
+    // prints "three, two, one, "
+    print()     
+
+}
+
 class OClass {
     var age = 0
 
@@ -832,6 +901,14 @@ class Moved {
     }
 }
 
+@sensitive
+struct SensitiveStruct {
+
+    var a: UInt32 = 0xdeadbeaf
+    var b: UInt32 = 0xdeadbeaf
+    var c: UInt32 = 0xdeadbeaf
+}
+
 @_eagerMove
 struct EagerlyMove {}
 
@@ -928,6 +1005,7 @@ class ExPerson {
 
 func takeOnlyConst(_: _const Int) {}
 
+@_preInverseGenerics
 func existential<T>(_: T.Type) -> T.Type { T.self }
 
 func existential(_ v: Any.Type) -> Any.Type { v }

@@ -1,14 +1,14 @@
-#pragma once
-
-#include <thread>
-#include <threads.h>
-#include <bits/std_thread.h>
-#include <vector>
-#include <functional>
-#include "threadqueue.h"
 #include "Ref.h"
-#include <variant>
 #include "swift/bridging"
+#include "threadqueue.h"
+#include <barrier>
+#include <bits/std_thread.h>
+#include <functional>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#pragma once
 
 using namespace std;
 
@@ -19,7 +19,8 @@ using TaskFuncPtr = void (*)(void);
 enum class TaskTypeForPool
 {
     Execute,
-    Stop
+    Stop,
+    Wait
 };
 
 struct Task_Pool
@@ -31,26 +32,33 @@ struct Task_Pool
 using TaskQueueForPool = TSQueue<Task_Pool>;
 
 class CXX_ThreadPool : NonCopyableClass, public ReferenceCountedClass<CXX_ThreadPool>
-{    
-protected:
+{
+private:
     vector<thread> threads;
     TaskQueueForPool queue;
-    int thread_count;
+    uint thread_count;
+    // static const CXX_ThreadPool *_Nonnull shared;
+    static CXX_ThreadPool shared;
+    barrier<> _barrier;
 
 protected:
     void submit(Task_Pool task);
 
 public:
-    CXX_ThreadPool();
+    // CXX_ThreadPool();
+    static const CXX_ThreadPool *_Nonnull const globalPool;
     void submit(TaskFuncPtr _Nonnull f);
     void submit(const void *_Nonnull value, void (*_Nonnull callback)(void const *_Nonnull value));
+    void submitTasks(function<void()> task);
     void submitTaskWithExecutor(const void *_Nonnull job, const void *_Nonnull executor, void (*_Nonnull callback)(void const *_Nonnull job, void const *_Nonnull executor));
-    CXX_ThreadPool(uint count = CPU_Count);
-
+    void waitForAll();
+    CXX_ThreadPool(uint count);
     ~CXX_ThreadPool();
     static CXX_ThreadPool *_Nonnull create(uint count = CPU_Count);
-    static CXX_ThreadPool *_Nonnull getGlobalPool();
+
 } SWIFT_UNCHECKED_SENDABLE SWIFT_SHARED_REFERENCE(retain_pool, release_pool);
+
+// const CXX_ThreadPool *_Nonnull CXX_ThreadPool::shared{CXX_ThreadPool::create()};
 
 auto getThreadID() -> string;
 

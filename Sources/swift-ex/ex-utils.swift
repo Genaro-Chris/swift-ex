@@ -1,4 +1,5 @@
 import Foundation
+import Interface
 
 public enum AsyncIterationMode: Sendable {
     /// Serial iteration performs each step in sequence, waiting for the previous one to complete before performing the next.
@@ -130,7 +131,7 @@ struct GlobalActorValueType: @unchecked Sendable {
 #if $ClosureIsolation || hasFeature(ClosureIsolation)
     func old(@_inheritActorContext _: @Sendable @isolated(any) () -> Void) {}
 
-    // func new(@inheritsIsolation _: @Sendable @isolated(any) () -> Void) {}
+// func new(@inheritsIsolation _: @Sendable @isolated(any) () -> Void) {}
 #endif
 
 func isolatedTo(_: isolated (any Actor), _ ops: () -> Void) {
@@ -140,7 +141,7 @@ func isolatedTo(_: isolated (any Actor), _ ops: () -> Void) {
 #if $IsolatedAny || hasFeature(IsolatedAny) || hasAttribute(isolatedAny)
     func isolatedAny(_ ops: @escaping @isolated(any) () -> Void) {
         let isolation = ops.isolation
-        Task(executorPreference: globalConcurrentExecutor) { // [isolated isolation /* or self in actors */] in
+        Task(executorPreference: globalConcurrentExecutor) {  // [isolated isolation /* or self in actors */] in
             _ = isolation
             print("waking")
             await ops()
@@ -162,8 +163,45 @@ func isolatedTo(_: isolated (any Actor), _ ops: () -> Void) {
 #endif
 
 #if swift(>=5.3) && $RetroactiveAttribute
-    // @_disallowFeatureSuppression(RetroactiveAttribute)
+    @_disallowFeatureSuppression(RetroactiveAttribute)
     extension String: @retroactive Identifiable {
         public var id: String { self }
     }
 #endif
+
+struct CompHand {
+    @AddCompletionHandler("HAND")
+    func comp_hand() async -> String {
+        ""
+    }
+}
+
+
+struct UnsafeClosure: @unchecked Sendable {
+    let body: () throws -> Void
+    func callAsFunction() throws {
+        try body()
+    }
+}
+
+func isolateClosure<A: Actor>(to a: A, _ clos: @escaping () throws -> Void) async rethrows {
+    let closure = UnsafeClosure(body: clos)
+    try await { (a: isolated A) in
+        try closure()
+    }(a)
+}
+
+
+struct AsyncUnsafeClosure: @unchecked Sendable {
+    let body: @isolated(any) () async throws -> Void
+    func callAsFunction() async throws {
+        try await body()
+    }
+}
+
+func isolateAsyncClosure<A: Actor>(to a: A, _ clos: @escaping @isolated(any) () throws -> Void) async rethrows {
+    let closure = AsyncUnsafeClosure(body: clos)
+    try await { (a: isolated A) in
+        try await closure()
+    }(a)
+}

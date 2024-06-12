@@ -1,4 +1,4 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import CompilerPluginSupport
@@ -139,7 +139,7 @@ let package = Package(
                     "-enable-library-evolution",
                 ]),
                 //.enableExperimentalFeature("AccessLevelOnImport"),
-                //.enableUpcomingFeature("InternalImportsByDefault"), 
+                //.enableUpcomingFeature("InternalImportsByDefault")
             ]),
 
         .target(
@@ -221,7 +221,7 @@ let package = Package(
                 .enableExperimentalFeature("MoveOnlyClasses"),
                 .enableExperimentalFeature("ThenStatements"),
                 .enableExperimentalFeature("BuiltinModule"),
-                .enableExperimentalFeature("BodyMacros"), // default swift 6
+                .enableExperimentalFeature("BodyMacros"), // default swift 6 release
                 .enableExperimentalFeature("PreambleMacros"),
                 .enableExperimentalFeature("CodeItemMacros"),
                 .enableExperimentalFeature("ImplicitLastExprResults"),
@@ -230,8 +230,6 @@ let package = Package(
                 .enableExperimentalFeature("StaticExclusiveOnly"),
                 .enableExperimentalFeature("Sensitive"),
                 .enableExperimentalFeature("TransferringArgsAndResults"),
-                .enableExperimentalFeature("RegionBasedIsolation"),
-                .enableUpcomingFeature("StrictConcurrency=complete"),
                 .enableExperimentalFeature("NonescapableTypes"),
                 .enableUpcomingFeature("ImplicitOpenExistenials"),
                 .enableExperimentalFeature("OpaqueTypeErasure"),
@@ -243,10 +241,9 @@ let package = Package(
                 .enableExperimentalFeature("MoveOnlyPartialConsumption"),
                 .enableExperimentalFeature("OptionalIsolatedParameters"),
                 .enableExperimentalFeature("ClosureIsolation"),
-                .enableUpcomingFeature("InferSendableFromCaptures"),
                 .enableExperimentalFeature("GlobalActorIsolatedTypesUsability"),
-                .enableExperimentalFeature("AccessLevelOnImport"),
-                .enableUpcomingFeature("InternalImportsByDefault"),
+                //.enableExperimentalFeature("AccessLevelOnImport"),
+                //.enableUpcomingFeature("InternalImportsByDefault")
                 .define("SWIFTSETTINGS"),
                 .define("TEST_DIAGNOSTICS"),
                 .unsafeFlags(
@@ -273,6 +270,7 @@ let package = Package(
             swiftSettings: [
                 .unsafeFlags([
                     "-Xfrontend", "-enable-private-imports",
+                    //"-enable-library-evolution"
                 ])
             ]
         ),

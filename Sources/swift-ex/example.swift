@@ -31,12 +31,27 @@ struct NonCopyable: ~Copyable {
     init() {}
 }
 
-// @_nonEscapable
+// @_nonEscapable // unknown attribute
 struct NonEscapableType: Escapable {
     var age: Int = 0
     // Error in swift 6.0 
     // @_unsafeNonEscapableResult
-    // init() {}
+    init() {}
+}
+
+final class SubscriptClass {
+
+    subscript() -> String {
+        ""
+    }
+
+    static subscript() -> Int {
+        0
+    }
+
+    class subscript() -> Float {
+        9.232
+    }
 }
 
 
@@ -193,4 +208,152 @@ func measure(_ name: String, _ work: (String) throws -> Void) rethrows {
         try work(name)
     }
     print("Time spent on \(name): \(timeSpent)")
+}
+
+// Conditional Conformance to Copyability for ~Copyable
+struct BoxCopy<Wrapped: ~Copyable>: ~Copyable {
+
+    final class Pointer<Element: ~Copyable> {
+        fileprivate var pointer: UnsafeMutablePointer<Element>
+
+        init(_ element: consuming Element) {
+            pointer = .allocate(capacity: 1)
+            pointer.initialize(to: element)
+        }
+
+        func interact<T: ~Copyable>(with: (borrowing Element) throws -> T) rethrows -> T {
+            try with(self.pointer.pointee)
+        }
+
+        func consume() -> Element {
+            let value = pointer.move()
+            pointer.deallocate()
+            value
+        }
+
+    }
+
+    private let pointer: Pointer<Wrapped>
+
+    init(_ wrapped: consuming Wrapped) {
+        pointer = .init(wrapped)
+    }
+
+    consuming func move() -> Wrapped {
+        let value = pointer.consume()
+        _ = consume self
+        value
+    }
+
+    func with(_ body: (borrowing Wrapped) -> Void) {
+        pointer.interact(with: body)
+    }
+}
+
+extension BoxCopy {
+    var wrapped: Wrapped { pointer.interact { $0 } }
+}
+
+struct ListCopy<Element: ~Copyable>: ~Copyable {
+    struct Node: ~Copyable {
+        var element: Element
+        var next: Link
+    }
+    typealias Link = BoxCopy<Node>?
+
+    var head: Link = nil
+}
+
+extension ListCopy.Node where Element: ~Copyable {
+    func forEach(_ body: (borrowing Element) -> Void) {
+        body(element)
+        next?.with { node in
+            node.forEach(body)
+        }
+    }
+}
+
+extension ListCopy where Element: ~Copyable {
+    mutating func push(_ element: consuming Element) {
+        self = ListCopy(
+            head: BoxCopy(
+                Node(element: element, next: self.head)))
+    }
+
+    mutating func pop() -> Element? {
+        switch head?.move() {
+        case nil:
+            self = .init()
+            return nil
+        case let node?:
+            self = ListCopy(head: node.next)
+            return node.element
+        }
+    }
+}
+
+extension ListCopy where Element: ~Copyable {
+    func forEach(_ body: (borrowing Element) -> Void) {
+        head?.with { node in node.forEach(body) }
+    }
+}
+
+extension ListCopy.Node {
+    func forEach(_ body: (Element) -> Void) {
+        body(element)
+        next?.with { node in
+            node.forEach(body)
+        }
+    }
+}
+
+extension ListCopy {
+    mutating func push(_ element: Element) {
+        self = ListCopy(
+            head: BoxCopy(
+                Node(element: element, next: self.head)))
+    }
+
+    mutating func pop() -> Element? {
+        switch head?.move() {
+        case nil:
+            self = .init()
+            return nil
+        case let node?:
+            self = ListCopy(head: node.next)
+            return node.element
+        }
+    }
+}
+
+extension ListCopy {
+    func forEach(_ body: (Element) -> Void) {
+        head?.with { node in node.forEach(body) }
+    }
+}
+
+extension BoxCopy: Copyable {}
+
+extension ListCopy: Copyable {}
+
+extension ListCopy.Node: Copyable {}
+
+
+struct MoveOnlyStruct<T: CustomStringConvertible>: ~Copyable {
+
+    let value: T
+
+    init(_ value: T) {
+        self.value = value
+        print("MoveOnlyStruct \(value) Initialized")
+    }
+
+    deinit {
+        print("MoveOnlyStruct \(value) deinitialized")
+    }
+}
+
+
+extension MoveOnlyStruct {
+    var description: String { value.description }
 }

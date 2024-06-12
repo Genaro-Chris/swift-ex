@@ -1,4 +1,4 @@
-#include <vector>
+#include <deque>
 #include <mutex>
 #include <optional>
 #include <condition_variable>
@@ -12,7 +12,7 @@ template <typename T>
 class TSQueue
 {
 private:
-    vector<T> buffer{};
+    deque<T> buffer{};
     mutex mtx;
     condition_variable cv;
 

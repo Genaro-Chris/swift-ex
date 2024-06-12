@@ -1,9 +1,10 @@
 #include "include/threadpool.h"
+#include <functional>
 #include <sstream>
 
-auto make_thread_handler(TaskQueueForPool &queue)
+auto make_thread_handler(TaskQueueForPool &queue, barrier<> &_barrier)
 {
-    return thread{[&queue]()
+    return thread{[&queue, &_barrier]()
                   {
                       while (true)
                       {
@@ -19,23 +20,22 @@ auto make_thread_handler(TaskQueueForPool &queue)
 
                               case TaskTypeForPool::Stop:
                                   return;
+
+                              case TaskTypeForPool::Wait:
+                                  _barrier.arrive_and_wait();
+                                  break;
                               }
                           }
                       }
                   }};
 }
 
-CXX_ThreadPool::CXX_ThreadPool(uint count)
+CXX_ThreadPool::CXX_ThreadPool(uint count) : threads{}, _barrier{count == 0 ? 2 : count + 1}, thread_count{count == 0 ? 1 : count}
 {
-    if (count == 0)
+    threads.reserve(thread_count);
+    for (int i = 0; i < thread_count; i++)
     {
-        count = 1;
-    }
-    threads.reserve(count);
-    thread_count = count;
-    for (int i = 0; i < count; i++)
-    {
-        threads.push_back(make_thread_handler(queue));
+        threads.push_back(make_thread_handler(queue, _barrier));
     }
 }
 
@@ -44,15 +44,25 @@ void CXX_ThreadPool::submit(Task_Pool task)
     queue << task;
 }
 
+void CXX_ThreadPool::waitForAll()
+{
+    Task_Pool const wait_task{TaskTypeForPool::Wait, {}};
+    for (size_t i = 0; i < thread_count; i++)
+    {
+        queue << wait_task;
+    }
+    _barrier.arrive_and_wait();
+}
+
 CXX_ThreadPool::~CXX_ThreadPool()
 {
     Task_Pool const stop_task{TaskTypeForPool::Stop, {}};
-    for (size_t i = 0; i < threads.size(); i++)
+    for (size_t i = 0; i < thread_count; i++)
     {
         queue << stop_task;
     }
 
-    for (size_t i = 0; i < threads.size(); i++)
+    for (size_t i = 0; i < thread_count; i++)
     {
         if (threads[i].joinable())
         {
@@ -81,6 +91,11 @@ void CXX_ThreadPool::submit(const void *value, void (*_Nonnull callback)(void co
                        }};
 }
 
+void CXX_ThreadPool::submitTasks(function<void()> task)
+{
+    queue << Task_Pool{.type = TaskTypeForPool::Execute, .task = task};
+}
+
 CXX_ThreadPool *CXX_ThreadPool::create(uint count)
 {
     return new CXX_ThreadPool(count);
@@ -94,19 +109,22 @@ void CXX_ThreadPool::submit(TaskFuncPtr f)
                        }};
 }
 
-static auto pool = new CXX_ThreadPool{CPU_Count};
+// const CXX_ThreadPool *_Nonnull CXX_ThreadPool::shared = CXX_ThreadPool::create();
 
-CXX_ThreadPool *_Nonnull CXX_ThreadPool::getGlobalPool()
+CXX_ThreadPool CXX_ThreadPool::shared{CXX_ThreadPool(CPU_Count)};
+
+CXX_ThreadPool const *_Nonnull const CXX_ThreadPool::globalPool = []
 {
-    pool->addref();
-    return pool;
-}
+    // CXX_ThreadPool::shared.addref();
+    return &CXX_ThreadPool::shared;
+}();
 
 string getThreadID()
 {
-    
+
     ostringstream ss;
-    ss << "#" << this_thread::get_id();
+    auto id{this_thread::get_id()};
+    ss << "#" << id;
     auto d = ss.str();
     return d;
 }

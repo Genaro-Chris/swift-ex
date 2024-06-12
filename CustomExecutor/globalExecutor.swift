@@ -4,18 +4,18 @@ import ThreadPool
 /// Example of a custom Executor of an actor
 public final class CustomGlobalExecutor: SerialExecutor, @unchecked Sendable {
 
-    @_hasStorage private var jobQueue: JobQueue<UnownedJob> = .init()
-    /*
+    @_hasStorage private var jobQueue: JobQueue<UnownedJob> // = .init()
+    
     // <unknown>:0: error: circular reference
     // <unknown>:0: note: through reference here
-    // swift 6.0
+    // swift 6.0 debug build
      {
         JobQueue()
     }
 
     public init() {
         jobQueue = JobQueue()
-    } */
+    }
 
     //private let threadpool = ThreadPool.create(CPU_Count)
 
