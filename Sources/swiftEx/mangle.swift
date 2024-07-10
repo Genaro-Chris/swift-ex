@@ -1,3 +1,4 @@
+import Foundation
 
 // <unknown>:0: error: circular reference
 // <unknown>:0: note: through reference here
@@ -13,9 +14,10 @@ func getTypeName(_ type: Any.Type, qualified: Bool) -> String {
 func printMem<T>(_ of: T.Type) {
     //let name = _mangledTypeName(of)!
 
-    let name = getTypeName(of, qualified: true)  
+    let name = getTypeName(of, qualified: true)
     //let type =  _typeByName(name)
     print("Size \(name): \(MemoryLayout<T>.size)")
     print("Alignment of \(name): \(MemoryLayout<T>.alignment)")
     print("Stride of \(name): \(MemoryLayout<T>.stride)")
 }
+

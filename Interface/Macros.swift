@@ -12,6 +12,11 @@
 
 import Foundation
 
+@attached(member, names: arbitrary)
+@attached(extension, conformances: OptionSet)
+public macro MyOptionSet<RawType>() =
+    #externalMacro(module: "Implementation", type: "OptionSetMacro")
+
 @attached(peer, names: suffixed(_throws))
 public macro throwsToResult(_ name: StaticString) =
     #externalMacro(module: "Implementation", type: "ThrowsToResult")

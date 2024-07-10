@@ -1,10 +1,8 @@
-@preconcurrency import CXX_Thread
+/* @preconcurrency */ import CXX_Thread
 internal import CustomExecutor
 import Foundation
 import Hook
 import Interface
-// import SwiftBridging
-// import Observation
 import SwiftWithCXX
 import _Differentiation
 import cxxLibrary
@@ -12,7 +10,12 @@ import cxxLibrary
 import class ThreadPool.ThreadPool
 import class ThreadPool.WaitGroup
 
-let handleG = CXX_ThreadPool.create(1)
+// import SwiftBridging
+#if canImport(Observation) && os(macOS)
+    import Observation
+#endif
+
+/* nonisolated(unsafe) */ let handleG: CXX_ThreadPool = CXX_ThreadPool.create(1)
 
 func handleTask(job: UnsafeRawPointer, _ body: @escaping @convention(c) (UnsafeRawPointer) -> Void)
 {
@@ -21,7 +24,7 @@ func handleTask(job: UnsafeRawPointer, _ body: @escaping @convention(c) (UnsafeR
 @main
 enum Program {
 
-    @TaskLocal static var local = ""
+    @TaskLocal static var local: String = ""
 
     static func main() async throws {
         do {
@@ -29,8 +32,9 @@ enum Program {
             typealias EnqueueOriginal = @convention(thin) (OpaqueJob) -> Void
             typealias EnqueueHook = @convention(thin) (OpaqueJob, EnqueueOriginal) -> Void
 
-            let handle = dlopen(nil, 0)
-            let enqueueGlobal_hook_ptr = dlsym(handle, "swift_task_enqueueGlobal_hook")!
+            let handle: UnsafeMutableRawPointer? = dlopen(nil, 0)
+            let enqueueGlobal_hook_ptr: UnsafeMutablePointer<EnqueueHook> = dlsym(
+                handle, "swift_task_enqueueGlobal_hook")!
                 .assumingMemoryBound(to: EnqueueHook.self)
 
             enqueueGlobal_hook_ptr.pointee = { opaque_job, original in
@@ -43,7 +47,7 @@ enum Program {
                 // <unknown>:0: error: circular reference
                 // <unknown>:0: note: through reference here
                 // swift 6.0
-                let job = unsafeBitCast(opaque_job, to: UnownedJob.self)
+                let job: UnownedJob = unsafeBitCast(opaque_job, to: UnownedJob.self)
                 CustomGlobalExecutor.sharedG.enqueue(job)
 
                 /* handleTask(job: opaque_job) {
@@ -66,7 +70,7 @@ enum Program {
             )
         }
 
-        let task = Task.detached {
+        let task: Task<(), any Error> = Task.detached {
             try await withTaskCancellationHandler {
                 print("About to sleep for 3 secs")
                 try await Task.sleep(for: .seconds(3))
@@ -101,7 +105,7 @@ enum Program {
             }
         #endif
 
-        var model = Perceptron(weight: SIMD2<Float>.init(x: 1, y: 2), bias: 4.7)
+        var model: Perceptron = Perceptron(weight: SIMD2<Float>.init(x: 1, y: 2), bias: 4.7)
         let andGateData: [(x: SIMD2<Float>, y: Float)] = [
             (x: [0, 0], y: 0),
             (x: [0, 1], y: 0),
@@ -125,15 +129,31 @@ enum Program {
         }
 
         do {
-            let pool = CXX_ThreadPool.create(4)
-            for _ in 1...3 {
-                pool.submit {
+            let pool: CXX_ThreadPool = CXX_ThreadPool.create(4)
+            let futex = FutexLock.create()
+            class Counter {
+                private(set) var count: Int = 0
+                func increment() { count += 1 }
+            }
+            let counter = Counter()
+            let futexUn = Unmanaged.passRetained(futex)
+            let counterUn = Unmanaged.passUnretained(counter)
+            for _ in 1...10 {
+                pool.submitTaskWithExecutor(futexUn.toOpaque(), counterUn.toOpaque()) {
+                    lock, count in
+                    let lock = Unmanaged<FutexLock>.fromOpaque(lock).retain().takeRetainedValue()
+                    let count = Unmanaged<Counter>.fromOpaque(count).takeUnretainedValue()
+                    lock.locked {
+                        count.increment()
+                    }
                     print(
-                        "ThreadPool \(Thread.current.name ?? "Unknown") with id \(Thread.current.id) and description \(Thread.current.description)"
+                        "ThreadPool \(Thread.current.name ?? "Unknown") and description \(Thread.current.description)"
                     )
                 }
             }
+
             pool.waitForAll()
+            print("Counter: \(counter.count)")
         }
 
         Task { nonisolated in
@@ -144,7 +164,7 @@ enum Program {
 
         try await [Int](repeating: 0, count: 100).asyncForEach(
             mode: .concurrent(priority: .high, parallellism: 5)
-        ) { _ in
+        ) { (_) in // Sending main actor-isolated value of type '(Int) async throws -> ()' with later accesses to nonisolated context risks causing data races
             try await Task.sleep(for: .microseconds(100))
         }
 
@@ -156,7 +176,7 @@ enum Program {
             print("Only in debug build")
         }
 
-        let task1 = Task.detached {
+        let task1: Task<Int, any Error> = Task.detached {
             try await withCancellingContinuation { cont in
                 Thread.sleep(forTimeInterval: 3)
                 cont.resume(returning: 200)
@@ -171,9 +191,7 @@ enum Program {
 
         print(try await task1.value)
 
-        let v = V< >() // : V<>
-
-        print(v, type(of: v))
+        useV()  // V< >()
 
         forValueType(value: 122)
         //forValueType(value: ThreadPool(2))
@@ -190,7 +208,9 @@ enum Program {
             print("EXAMPLESETTINGS")
         #endif
 
-        var angle = Angle()
+        consumingGet()
+
+        var angle: Angle = Angle()
         angle.radians = 43.21
         print("\(angle.points)\n\(angle.radians)")
 
@@ -199,8 +219,8 @@ enum Program {
         var person: PersonDetail? = PersonDetail(details: Ex(age: 18, name: "Adam"))
 
         person?.details.name = "Changed"
-        let person1 = person
-        let person2 = person
+        let person1: PersonDetail? = person
+        let person2: PersonDetail? = person
 
         print("Person \(person!)")
 
@@ -232,13 +252,17 @@ enum Program {
             print("Person2 \(person2)")
         }
 
-        _const let onlyConst = 0
-
         _ = SensitiveStruct()
 
         // takeOnlyConst(onlyConst) // expect a compile-time constant literal
 
-        let subscripter = SubscriptClass()
+        takeOnlyConst(23)
+
+        let dto: DTOStruct = DTOStruct(
+            id: UUID(), createdAt: .now, title: "String", description: "String", items: [1, 23, 3])
+        print(dto)
+
+        let subscripter: SubscriptClass = SubscriptClass()
 
         _ = subscripter[]
         let _: Int = SubscriptClass[]
@@ -265,12 +289,12 @@ enum Program {
         let _: (BaseClass) -> SubClass = \BaseClass.subClass
 
         #if $TransferringArgsAndResults || hasFeature(TransferringArgsAndResults)
-
-            let n = OClass()            
+            let _: (_: /* inout, borrowing, consuming */ transferring OClass) -> transferring OClass
+            let n: OClass = OClass()
             extendLife(n)
             await CustomActor.shared.take(n)
-            // Concurrent usage of non-sendable type
-            /* print(n) */
+        // Concurrent usage of non-sendable type
+        /* print(n) */
         #endif
 
         Task.init(executorPreference: globalConcurrentExecutor) {
@@ -287,7 +311,7 @@ enum Program {
             CustomGlobalExecutor.sharedG
         ) {
             await withDiscardingTaskGroup { group in
-                for _ in 1 ... 5 {
+                for _ in 1...5 {
                     group.addTask {
                         print("\(Thread.current.name ?? "unknown")")
                     }
@@ -316,35 +340,37 @@ enum Program {
             print("\(Thread.current.name ?? "unknown")")
         } */
 
-
-        let wg = DispatchGroup()
+        /* let wg: DispatchGroup = DispatchGroup()
         wg.enter()
-        let un = Unmanaged.passUnretained(wg)
+        let un: Unmanaged<DispatchGroup> = Unmanaged.passUnretained(wg)
         handleG.submit(un.toOpaque()) { wG in
             ThreadPool.globalPool.submit {
                 print("Using Unmanaged")
                 print("\(Thread.current.name ?? "unknown")")
                 Unmanaged<DispatchGroup>.fromOpaque(wG).takeUnretainedValue().leave()
             }
-            ThreadPool.globalPool.poll()
-            
         }
 
-        //wg.wait()
+        // wg.wait()
+        ThreadPool.globalPool.poll()
 
-        handleG.waitForAll()
-        
-        Task.detached {  // @MainActor in
-            if _taskIsOnExecutor(CustomGlobalExecutor.sharedG) {
-                print(
-                    "Task is executing on \(type(of: CustomGlobalExecutor.sharedG)) which is \(Thread.current.name ?? "unknown")"
-                )
+        handleG.waitForAll() */
+
+        Task.detached { /* @CustomActor in */
+            // @MainActor in
+            await withTaskExecutorPreference(CustomGlobalExecutor.sharedG) {
+                if _taskIsOnExecutor(CustomGlobalExecutor.sharedG) {
+                    print(
+                        "Task is executing on \(type(of: CustomGlobalExecutor.sharedG)) which is \(Thread.current.name ?? "unknown")"
+                    )
+                }
             }
+
         }
 
-        let new = NewActor()
+        let new: NewActor = NewActor()
         await withDiscardingTaskGroup { group in
-            let actor = CustomActor()
+            let actor: CustomActor = CustomActor()
             for priority in TaskPriority.allCases {
                 group.addTask(priority: priority) {
                     Task { @CustomActor in
@@ -358,18 +384,49 @@ enum Program {
 
         print("After \(await new.counter)")
 
+        let _ /* tuple */: NonCopyableTuplePair<String, NonCopyableEnum> = ("Noncopyable Tuple", NonCopyableEnum.one)
 
-        let resultInt = if Bool.random() {
-            print("Then statement")
-            then 0
-        } else {
-            print("Then")
-            then 1
-        }
+        
+        /* 
+        
+        // Can't use MoveOnlyTuples in any way
+        let (old_, _) = tuple
 
-        print(resultInt)
+        print(old_)
+
+        print(type(of: tuple))
+
+        print(tuple.0)
+
+        _ = tuple */
+
+        useThen()  // use Then statement
 
         dou()
+
+        lexy("Msg")
+
+        useRethrowProto()
+
+        await unsafeInheritExecutor()
+
+        unsafe {
+            print(#function, "unsafe")
+        }
+
+        #if compiler(>=5.3) && $StaticAssert
+            print("Static Assert")
+            #assert(true)
+        #endif
+
+        var ptr: Int = 0
+
+        // Cannot use inout expression here; argument 'at' must be a pointer that outlives the call to 'noInout(at:)'
+        // Implicit argument conversion from 'Int' to 'UnsafeMutablePointer<Int>' produces a pointer valid only for the duration of the call to 'noInout(at:)'
+        // noInout(at: &ptr)
+        withUnsafeMutablePointer(to: &ptr) { noInout(at: $0) }
+
+        sendableFunc(1, 2.3, "", 32.4 as Float)
 
         print("Random number is: ", createUniformPseudoRandomNumberGenerator(1.0, 90.5))
 
@@ -377,7 +434,7 @@ enum Program {
 
         helloWorld("Hello world from C++")
 
-        var user = ConceptUser("Concept Impl")
+        var user: ConceptUser = ConceptUser("Concept Impl")
 
         main_actor_func {
             print("MainActor isolated closure in swift")
@@ -389,14 +446,19 @@ enum Program {
 
         user.Print("msg: std.string")
 
-        let mainActorInstance = MainActorStruct(name: "MainActor isolated struct instance from c++")
+        let mainActorInstance: MainActorStruct = MainActorStruct(
+            name: "MainActor isolated struct instance from c++")
 
         mainActorInstance.print_name()
 
         // keywords consume, borrowing, consuming, copy, __shared, __owned,
         usesConcept(copy user)
 
-        let cstr = returns_string()
+        let _: CXX_Any = CXX_Any(123)
+
+        // _ = cxx_any.values
+
+        let cstr: std.string = returns_string()
 
         print(cstr)
 
@@ -405,19 +467,19 @@ enum Program {
         usesConcept(newStr)
 
         do {
-            var value = 123.5
-            let val = special_move(&value)
+            var value: Double = 123.5
+            let val: UnsafeMutablePointer<Double> = special_move(&value)
             print(val.pointee)
             _ = consume value
         }
 
-        let new_val = special_move(&user)
+        let new_val: UnsafeMutablePointer<ConceptUser> = special_move(&user)
 
-        var specialValue = SpecialType()
+        var specialValue: SpecialType = SpecialType()
 
         print(specialValue)
 
-        let new_val1 = special_move(&specialValue)
+        let new_val1: UnsafeMutablePointer<SpecialType> = special_move(&specialValue)
 
         usesConcept(1345)
 
@@ -429,108 +491,84 @@ enum Program {
 
         print("Done using moved value")
 
+        // Play with c++ noncopyable types and consuming, borrowing modifiers
+        cxx_move()
+
         #if IsolatedAny || hasFeature(IsolatedAny) || hasAttribute(IsolatedAny)
             isolatedAny { @CustomActor in print("#isolatedAny isolated to CustomActor") }
         #endif
 
         #if IsolatedAny || hasFeature(IsolatedAny) || hasAttribute(IsolatedAny)
             isolatedAny { @CustomActor in
-            print("#isolatedAny isolated to CustomActor hence accessing point \(GlobalActorValueType(point: Point(), counter: 0).point) without await") }
+                print(
+                    "#isolatedAny isolated to CustomActor hence accessing point \(GlobalActorValueType(point: Point(), counter: 0).point) without await"
+                )
+            }
             Task(executorPreference: CustomThreadGlobalExecutor.sharedT) {
-                let gV = await GlobalActorValueType(point: Point(), counter: 0)
+                let gV: GlobalActorValueType = await GlobalActorValueType(
+                    point: Point(), counter: 0)
                 await CustomActor.run {
                     print(gV.point)
                 }
             }
         #endif
 
-        try await closure { nonisolated in // weird bug in swift 6 swift 6 fix
+        try await closure { nonisolated in  // weird bug in swift 6 swift 6 fix
             try await Task.sleep(for: .seconds(5))
             print("Closure")
         }
 
         print(typeErased())
 
-        await isolatedTo(CustomActor.shared) { nonisolated in // weird bug in swift 6 swift 6 fix
+        await isolatedTo(CustomActor.shared) { nonisolated in  // weird bug in swift 6 swift 6 fix
             print("#isolatedTo isolated to CustomActor")
         }
 
         #if hasAttribute(allowFeatureSuppression) || hasFeature(OptionalIsolatedParameters)
-            let duration = await measure {
+            let duration: Duration = await measure {
                 try? await Task.sleep(for: .microseconds(100))
                 print("#measure OptionalIsolatedParameters")
             }
             print("It took \(duration)")
         #endif
 
-        let adam = Person(name: "Adam", age: 25)
+        let adam: Person = Person(name: "Adam", age: 25)
 
         print("Adam \(adam)")
-        let moved = ExPerson()
+        let moved: ExPerson = ExPerson()
 
         // __swift_interopStaticCast(from: Int)
 
         _ = consume moved
 
-        /* 
-        // compiler bug 
-        // swift 6
-         var list: List<String> = .init()
-        list.push("one")
-        list.push("two")
+        // _resultDependsOnSelf
+        _ = MethodModifiers().resultDependsOnSelf()
 
-        var listlist: List<List<String>> = .init()
-        listlist.push(list)
-        // list.push("three")  // now forbidden, list was consumed
-        list = listlist.pop()!  // but if we move it back out...
-        list.push("three")  // this is allowed again
-
-        list.forEach { element in
-            print(element, terminator: ", ")
-        }
-        // prints "three, two, one, "
-        print()
-        while let element = list.pop() {
-            print(element, terminator: ", ")
-        }
-        // prints "three, two, one, "
-        print()
-
-        
-
-        var nce = NonCopyableEnum.one  // must be var not let else compiler crashes
-        switch consume nce {
-            case .one: ()
-            case .two: ()
-            case .three(let y): y.consumingfunc()
-        }
-
-        nce = .two
-
-        #if $BorrowingSwitch || hasFeature(BorrowingSwitch)
-            let nc = NonCopyEnum.one
-            switch /* _borrowing */ nc {
-                case .one: ()
-                case .two: ()
-                case .three(let borrowing y): y.borrowingfunc()
-            }
-        #endif */
-
+        // Noncopyable Generics, Borrowing switch, MoveOnlyPartialConsumption
         playWith()
 
         // Conditional Copyability
         print("Conditional Copyability")
         playWithCopy()
 
-        let pType = Person.self
+        // Destructing
+        destructuredQuantityTuple()
+
+        destructuredQuantity()
+
+        destructuredApply()
+
+        destructuredSwitch()
+
+        let pType: Person.Type = Person.self
 
         let metatype: Any.Type = pType
 
         print(existential(pType))
 
-        print(_openExistential(metatype, do: existential)) // calls existential(T.Type)
+        print(_openExistential(metatype, do: existential))  // calls existential(T.Type)
 
-        print(existential(metatype)) // calls existential(_: Any.Type)
+        print(existential(metatype))  // calls existential(_: Any.Type)
 
         #if $ImplicitLastExprResults && hasFeature(ImplicitLastExprResults)
             _ = returnLastExpr()
@@ -538,11 +576,11 @@ enum Program {
 
         print(existential(_openExistential(metatype, do: existential)))
 
-        print(existential(metatype)) // Error:
+        print(existential(metatype))  // Error:
 
         measure("CXX_ThreadPool_globalPool_Wait_Unret") { _ in
-            let group = WaitGroup()
-            let grp = Unmanaged.passUnretained(group).toOpaque()
+            let group: WaitGroup = WaitGroup()
+            let grp: UnsafeMutableRawPointer = Unmanaged.passUnretained(group).toOpaque()
             for _ in 1...1_000_000 {
                 group.enter()
                 CXX_ThreadPool.globalPool.submit(grp) { grp in
@@ -553,11 +591,35 @@ enum Program {
         }
 
         measure("CXX_ThreadPool_globalPool_Wait_Ret") { _ in
-            let group = WaitGroup()
-            let grp = Unmanaged.passRetained(group).toOpaque()
+            let group: WaitGroup = WaitGroup()
+            let grp: UnsafeMutableRawPointer = Unmanaged.passRetained(group).toOpaque()
             for _ in 1...1_000_000 {
                 group.enter()
                 CXX_ThreadPool.globalPool.submit(grp) { grp in
+                    Unmanaged<WaitGroup>.fromOpaque(grp).retain().takeRetainedValue().done()
+                }
+            }
+            group.waitForAll()
+        }
+
+        measure("CXX_threadpool_globalPool_Wait_Unret") { _ in
+            let group: WaitGroup = WaitGroup()
+            let grp: UnsafeMutableRawPointer = Unmanaged.passUnretained(group).toOpaque()
+            for _ in 1...1_000_000 {
+                group.enter()
+                CXX_threadpool.global_pool.submit_with(grp) { grp in
+                    Unmanaged<WaitGroup>.fromOpaque(grp).takeUnretainedValue().done()
+                }
+            }
+            group.waitForAll()
+        }
+
+        measure("CXX_threadpool_global_pool_Wait_Ret") { _ in
+            let group: WaitGroup = WaitGroup()
+            let grp: UnsafeMutableRawPointer = Unmanaged.passRetained(group).toOpaque()
+            for _ in 1...1_000_000 {
+                group.enter()
+                CXX_threadpool.global_pool.submit_with(grp) { grp in
                     Unmanaged<WaitGroup>.fromOpaque(grp).retain().takeRetainedValue().done()
                 }
             }

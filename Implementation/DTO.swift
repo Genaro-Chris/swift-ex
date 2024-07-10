@@ -8,7 +8,7 @@ extension DeclModifierListSyntax.Element {
         [.public, .private, .internal, .open, .fileprivate] as [Keyword]
 
     var isVisibilityModifier: Bool {
-        if case let .keyword(val) = self.as(DeclModifierSyntax.self)?.name.tokenKind {
+        if case let .keyword(val) = self/* .as(DeclModifierSyntax.self)? */.name.tokenKind {
             return Self.visibility.contains(val)
         }
         return false

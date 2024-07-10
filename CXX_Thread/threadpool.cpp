@@ -1,4 +1,5 @@
 #include "include/threadpool.h"
+#include "threadpool.h"
 #include <functional>
 #include <sstream>
 
@@ -30,7 +31,7 @@ auto make_thread_handler(TaskQueueForPool &queue, barrier<> &_barrier)
                   }};
 }
 
-CXX_ThreadPool::CXX_ThreadPool(uint count) : threads{}, _barrier{count == 0 ? 2 : count + 1}, thread_count{count == 0 ? 1 : count}
+CXX_ThreadPool::CXX_ThreadPool(uint count) : threads{}, _barrier{std::barrier(count == 0 ? 2 : count + 1)}, thread_count{count == 0 ? 1 : count}
 {
     threads.reserve(thread_count);
     for (int i = 0; i < thread_count; i++)
@@ -109,8 +110,6 @@ void CXX_ThreadPool::submit(TaskFuncPtr f)
                        }};
 }
 
-// const CXX_ThreadPool *_Nonnull CXX_ThreadPool::shared = CXX_ThreadPool::create();
-
 CXX_ThreadPool CXX_ThreadPool::shared{CXX_ThreadPool(CPU_Count)};
 
 CXX_ThreadPool const *_Nonnull const CXX_ThreadPool::globalPool = []
@@ -127,4 +126,9 @@ string getThreadID()
     ss << "#" << id;
     auto d = ss.str();
     return d;
+}
+
+CXX_ThreadPool *_Nonnull CXX_ThreadPool::global()
+{
+    return CXX_ThreadPool::create();
 }

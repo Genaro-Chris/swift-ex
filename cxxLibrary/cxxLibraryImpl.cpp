@@ -6,6 +6,16 @@
 #include <string>
 using namespace std;
 
+void MoveOnlyType::consume_this() const // consuming method
+{
+    cout << "consuming this\n";
+}
+
+void MoveOnlyType::borrow_this() const // consuming method
+{
+    cout << "borrowing this\n";
+}
+
 void hello_world(string msg) 
 {
     cout << msg << endl;

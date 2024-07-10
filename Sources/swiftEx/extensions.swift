@@ -97,10 +97,12 @@ func someMainActorFunc() async {
 
 // doesn't work
 func play1() async throws {
-    await MainActor.run {swift_task_enqueueGlobal_hook = { job, original in
-        print("enqueueGlobal")
-        original(job)
-    }}
+    await MainActor.run {
+        swift_task_enqueueGlobal_hook = { job, original in
+            print("enqueueGlobal")
+            original(job)
+        }
+    }
     /* swift_task_enqueueGlobal_hook = { job, original in
     print("enqueueGlobal")
     original(job)
@@ -129,4 +131,64 @@ swift_task_enqueueMainExecutor_hook = { job, original in
         await someMainActorFunc()
     }.value
 
+}
+
+@rethrows
+protocol RethrowingProtocol {
+    associatedtype Value
+    var value: Value { get set }
+    func getValue() throws -> Value
+    mutating func setValue<T>(with: (inout Value) throws -> T) rethrows -> T
+}
+
+extension RethrowingProtocol {
+    /* func getValue() throws -> Value {
+        return value
+    } */
+
+    mutating func setValue<T>(with: (inout Value) throws -> T) rethrows -> T {
+        print("Protocol Impl")
+        return try with(&self.value)
+    }
+}
+
+struct SampleStruct<T>: RethrowingProtocol {
+    var value: T
+    func getValue() -> T {
+        return value
+    }
+
+    mutating func setValue<U>(with: (inout T) throws -> U) rethrows -> U {
+        print("Struct Impl")
+        return try with(&self.value)
+    }
+}
+
+func useRethrowProto() {
+    print("@rethrows protocol")
+    do {
+        var sample: some RethrowingProtocol = SampleStruct(value: UUID())
+        print("\(try sample.getValue())")
+        // Member 'setValue' cannot be used on value of type 'any RethrowingProtocol';
+        // consider using a generic constraint instead
+        // SourceKit existential-member-access-limitations
+        // var sample: any RethrowingProtocol
+        /* sample.setValue { value in
+
+        } */
+        // try is complulsory because it from a rethrowing protocol
+        try sample.setValue { value in
+            print(type(of: value))
+        }
+        var sample2 = SampleStruct(value: "Message")
+        print("\(sample2.getValue())")
+        /* 
+            try
+            // No need for try 
+        */sample2.setValue { value in
+            print(type(of: value))
+        }
+    } catch {
+        print(error)
+    }
 }

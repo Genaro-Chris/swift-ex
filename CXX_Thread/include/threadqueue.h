@@ -38,8 +38,8 @@ public:
                 { return !buffer.empty(); });
         if (buffer.empty())
             return nullopt;
-        auto val = buffer.back();
-        buffer.pop_back();
+        auto val = buffer.front();
+        buffer.pop_front();
         return val;
     }
     int length()

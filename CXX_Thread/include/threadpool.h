@@ -5,12 +5,13 @@
 #include <bits/std_thread.h>
 #include <functional>
 #include <thread>
-#include <utility>
 #include <vector>
 
 #pragma once
 
 using namespace std;
+
+using Barrier = barrier<>;
 
 const auto CPU_Count = thread::hardware_concurrency();
 
@@ -39,7 +40,8 @@ private:
     uint thread_count;
     // static const CXX_ThreadPool *_Nonnull shared;
     static CXX_ThreadPool shared;
-    barrier<> _barrier;
+    // barrier<> _barrier; // Compiler Bug crashing swift 
+    Barrier _barrier;
 
 protected:
     void submit(Task_Pool task);
@@ -47,6 +49,7 @@ protected:
 public:
     // CXX_ThreadPool();
     static const CXX_ThreadPool *_Nonnull const globalPool;
+    static CXX_ThreadPool *_Nonnull global();
     void submit(TaskFuncPtr _Nonnull f);
     void submit(const void *_Nonnull value, void (*_Nonnull callback)(void const *_Nonnull value));
     void submitTasks(function<void()> task);

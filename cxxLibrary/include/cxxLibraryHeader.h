@@ -108,6 +108,10 @@ private:
 /// @return the generated random number
 auto createUniformPseudoRandomNumberGenerator(double min, double max) -> double;
 
+#define SWIFT_CONSUMING_ __attribute__((swift_attr("consuming")))
+#define SWIFT_BORROWING_ __attribute__((swift_attr("borrowing")))
+
+
 /// Special move function
 ///
 /// Like the std::move function do, all this function do
@@ -165,6 +169,15 @@ public:
         return *this;
     }
 
+    int getValue() const SWIFT_COMPUTED_PROPERTY {
+        return m_value;
+    }
+
+    SWIFT_CONSUMING_ void consume_this() const;  // consuming method
+    
+    SWIFT_BORROWING_ void borrow_this() const;  // borrowing method
+    
+
 private:
     int m_value;
-};
+} SWIFT_NONCOPYABLE;

@@ -1,5 +1,5 @@
 import CXX_Thread
-import Foundation
+internal import Foundation
 
 public final class LockCustomExecutor: SerialExecutor {
     public func asUnownedSerialExecutor() -> UnownedSerialExecutor {

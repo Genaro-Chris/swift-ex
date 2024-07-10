@@ -27,3 +27,13 @@ MoveOnly &MoveOnly::operator=(MoveOnly &&sp) noexcept // Move assignment operato
     m_value = std::move(sp.m_value);
     return *this;
 }
+
+void MoveOnly::consume_this() const // consuming method
+{
+    cout << "consuming this\n";
+}
+
+void MoveOnly::borrow_this() const // consuming method
+{
+    cout << "borrowing this\n";
+}

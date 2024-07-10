@@ -1,6 +1,8 @@
 module cxxLibrary {
     header "cxxLibraryHeader.h"
     header "moveonly.h"
+    header "any.h"
+    header "futex.h"
     
     export *
 }

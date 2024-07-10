@@ -11,3 +11,14 @@ swiftc ./ex.swift -target wasm64-unknown-none-wasm -o embedded.o -wmo -enable-ex
 swiftc -Osize -Xcc -fdeclspec -disable-cmo -Xfrontend -gnone -Xclang-linker -nostdlib -target wasm64-unknown-none-wasm -enable-experimental-feature Extern -enable-experimental-feature Embedded -wmo ex.swift -c -o embedded.o
 #no stack protector
 swiftc -Osize -Xcc -fdeclspec -disable-cmo -Xfrontend -gnone -Xclang-linker -nostdlib -Xfrontend -disable-stack-protector -target wasm64-unknown-none-wasm -enable-experimental-feature Extern -enable-experimental-feature Embedded -wmo ex.swift -c -o embedded.o
+
+
+swiftc ./ex.swift -o ex -Osize -enable-experimental-feature Embedded -wmo -Xllvm -link-embedded-runtime=0
+swiftc ./ex.swift -o ex -enable-experimental-feature Embedded -wmo -Xllvm -link-embedded-runtime=0 -Osize -Xcc -fdeclspec -disable-cmo -Xfrontend -gnone
+swiftc ./ex.swift -o ex -enable-experimental-feature Embedded -wmo -Xllvm -link-embedded-runtime=0 -Osize -Xcc -fdeclspec -disable-cmo -Xfrontend -gnone -Xfrontend -disable-stack-protector -lto=llvm-thin -Ounchecked -O
+
+
+swiftc ./ex.swift -o ex -enable-experimental-feature Embedded -wmo -Xllvm -link-embedded-runtime=0 -Osize -Xcc -fdeclspec -disable-cmo -Xfrontend -gnone -Xfrontend -disable-stack-protector -lto=llvm-thin -Ounchecked -O -target x86_64-unknown-linux-gnu
+
+# if ex.swift has the @main attribute
+swiftc ./ex.swift -o ex -enable-experimental-feature Embedded -wmo -Xllvm -link-embedded-runtime=0 -Osize -Xcc -fdeclspec -disable-cmo -Xfrontend -gnone -Xfrontend -disable-stack-protector -lto=llvm-thin -Ounchecked -O -target x86_64-unknown-linux-gnu -parse-as-library

@@ -25,6 +25,7 @@
             RemoteMacro.self,
             TracedPreambleMacro.self,
             UnwrapMacro.self,
+            OptionSetMacro.self,
         ]
     }
 #endif

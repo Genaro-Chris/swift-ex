@@ -1,8 +1,8 @@
 #pragma once
 
+#include <atomic>
 #include <concepts>
 #include <type_traits>
-#include <atomic>
 
 using namespace std;
 
@@ -37,7 +37,7 @@ public:
 
 private:
     ReferenceCountedClass(const ReferenceCountedClass &); // = delete;
-    void operator=(const ReferenceCountedClass &);   // = delete;
+    void operator=(const ReferenceCountedClass &);        // = delete;
     mutable atomic_int referenceCount;
 };
 

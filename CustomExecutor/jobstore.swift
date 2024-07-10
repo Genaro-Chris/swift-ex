@@ -1,4 +1,4 @@
-import Foundation
+private import Foundation
 
 class JobQueue<Element>: @unchecked Sendable {
     private var array: [Element] = Array()

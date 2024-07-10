@@ -118,7 +118,7 @@ public final class SampleFIFOCustomExecutor: SerialExecutor {
 
 } */
 
-import CXX_Thread
+@_exported import CXX_Thread
 
 /// Example of a custom Executor of an actor
 public final class CustomExecutor: SerialExecutor, @unchecked Sendable {

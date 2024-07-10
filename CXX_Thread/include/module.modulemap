@@ -1,4 +1,5 @@
 module CXX_Thread {
+    header "my_thread.h"
     header "thread_header.h"
     header "singlethread.h"
     header "threadpool.h"

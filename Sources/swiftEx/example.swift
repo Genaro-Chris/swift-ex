@@ -31,14 +31,6 @@ struct NonCopyable: ~Copyable {
     init() {}
 }
 
-// @_nonEscapable // unknown attribute
-struct NonEscapableType: Escapable {
-    var age: Int = 0
-    // Error in swift 6.0 
-    // @_unsafeNonEscapableResult
-    init() {}
-}
-
 final class SubscriptClass {
 
     subscript() -> String {
@@ -68,6 +60,13 @@ enum NonCopyableEnum: ~Copyable {
     case three(NonStruct)
 }
 
+/* // @_nonEscapable // unknown attribute
+struct NonEscapableType: Escapable {
+    var age: Int = 0
+    // Error in swift 6.0 
+    // @_unsafeNonEscapableResult
+    init() {}
+}
 
 func returnNE() -> NonEscapableType {
     return NonEscapableType()
@@ -99,7 +98,7 @@ func borrow_indirect<NE: ~Escapable>(ne: borrowing NE) -> /* _borrow(ne) */ NE {
         return NonEscapableType()
     }
 
-#endif
+#endif */
 
 struct Box<Wrapped: ~Copyable>: ~Copyable {
     private let pointer: UnsafeMutablePointer<Wrapped>
@@ -177,9 +176,9 @@ extension List where Element: ~Copyable {
 }
 
 class MethodModifiers {
-    _resultDependsOnSelf func _resultDependsOnSelf() -> Builtin.NativeObject {
+    _resultDependsOnSelf func resultDependsOnSelf() -> Builtin.NativeObject {
         return Builtin.unsafeCastToNativeObject(self)
-        }
+    }
 }
 
 // property accessors 
@@ -201,6 +200,25 @@ extension UnsafeMutablePointer {
         _read { yield pointee }
         _modify { yield &pointee }
     }
+
+    var someValue: Pointee {
+        mutating _read { 
+            let newPointee = pointee
+            yield newPointee
+            pointee = newPointee
+        }
+        // never nonmutating
+        _modify { 
+            var newPointee = pointee
+            yield &newPointee
+        }
+    }
+
+    /* var someAddr: Pointee {
+        _addressor {
+            pointee
+        }
+    } */
 }
 
 func measure(_ name: String, _ work: (String) throws -> Void) rethrows {

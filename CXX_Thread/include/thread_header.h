@@ -2,7 +2,6 @@
 
 #include "swift/bridging"
 #include <vector>
-#include <threads.h>
 #include <thread>
 #include "Ref.h"
 
@@ -35,12 +34,10 @@ public:
 
 inline void retain_thread(CXX_Thread *_Nonnull ref)
 {
-    ref->addref();
-    // retained(ref);
+    retained(ref);
 }
 
 inline void release_thread(CXX_Thread *_Nonnull ref)
 {
-    ref->delref();
-    // released(ref);
+    released(ref);
 }

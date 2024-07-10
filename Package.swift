@@ -1,4 +1,4 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import CompilerPluginSupport
@@ -25,7 +25,7 @@ func tryGuessSwiftLibRoot() -> String {
 }
 
 let package = Package(
-    name: "swift-ex",
+    name: "swiftEx",
     platforms: [
         .macOS(.v13)
     ],
@@ -36,6 +36,12 @@ let package = Package(
             targets: [
                 "SwiftWithCXX"
             ]),
+        .library(
+            name: "CLib",
+            targets: [
+                "CLib"
+            ]
+        ),
         .library(
             name: "shared",
             targets: [
@@ -78,6 +84,11 @@ let package = Package(
                 "swiftImpl"
             ]),
         .library(
+            name: "AtomicShims",
+            targets: [
+                "AtomicShims"
+            ]),
+        .library(
             name: "ThreadPool",
             targets: [
                 "ThreadPool"
@@ -95,8 +106,8 @@ let package = Package(
             ]
         ),
         .executable(
-            name: "swift-ex",
-            targets: ["swift-ex"]
+            name: "swiftEx",
+            targets: ["swiftEx"]
         ),
     ],
     dependencies: [
@@ -127,6 +138,19 @@ let package = Package(
         ),
 
         .target(
+            name: "CLib",
+            dependencies: [
+                "CustomExecutor"
+            ],
+            path: "CLib/",
+            cSettings: [
+                .unsafeFlags([
+                    ""
+                ])
+            ]
+        ),
+
+        .target(
             name: "shared",
             dependencies: [
                 "DistributedHTTPActorSystem"
@@ -137,9 +161,9 @@ let package = Package(
                     "-validate-tbd-against-ir=none",
                     "-Xfrontend",
                     "-enable-library-evolution",
-                ]),
+                ])
                 //.enableExperimentalFeature("AccessLevelOnImport"),
-                //.enableUpcomingFeature("InternalImportsByDefault"), 
+                //.enableUpcomingFeature("InternalImportsByDefault")
             ]),
 
         .target(
@@ -158,6 +182,8 @@ let package = Package(
             ], path: "CustomExecutor",
             swiftSettings: [
                 .interoperabilityMode(.Cxx),
+                .enableExperimentalFeature("AccessLevelOnImport"),
+                .enableUpcomingFeature("InternalImportsByDefault"),
                 .unsafeFlags(
                     [
                         "-I", tryGuessSwiftLibRoot(),
@@ -200,7 +226,7 @@ let package = Package(
 
         // A client of the library, which is able to use the macro in its own code.
         .executableTarget(
-            name: "swift-ex",
+            name: "swiftEx",
             dependencies: [
                 "SwiftWithCXX",
                 "CXX_Thread",
@@ -209,8 +235,10 @@ let package = Package(
                 "CustomExecutor",
                 "Interface",
                 "Hook",
+                "AtomicShims"
             ],
             swiftSettings: [
+                .interoperabilityMode(.C),
                 .interoperabilityMode(.Cxx),
                 .enableExperimentalFeature("GenerateBindingsForThrowingFunctionsInCXX"),
                 .enableExperimentalFeature("TypedThrows"),
@@ -221,7 +249,7 @@ let package = Package(
                 .enableExperimentalFeature("MoveOnlyClasses"),
                 .enableExperimentalFeature("ThenStatements"),
                 .enableExperimentalFeature("BuiltinModule"),
-                .enableExperimentalFeature("BodyMacros"), // default swift 6
+                .enableExperimentalFeature("BodyMacros"),  // default swift 6 release
                 .enableExperimentalFeature("PreambleMacros"),
                 .enableExperimentalFeature("CodeItemMacros"),
                 .enableExperimentalFeature("ImplicitLastExprResults"),
@@ -230,34 +258,35 @@ let package = Package(
                 .enableExperimentalFeature("StaticExclusiveOnly"),
                 .enableExperimentalFeature("Sensitive"),
                 .enableExperimentalFeature("TransferringArgsAndResults"),
-                .enableExperimentalFeature("RegionBasedIsolation"),
-                .enableUpcomingFeature("StrictConcurrency=complete"),
                 .enableExperimentalFeature("NonescapableTypes"),
                 .enableUpcomingFeature("ImplicitOpenExistenials"),
                 .enableExperimentalFeature("OpaqueTypeErasure"),
                 .enableExperimentalFeature("IsolatedAny"),
+                .enableExperimentalFeature("StaticAssert"),
                 .enableExperimentalFeature("IsolatedAny2"),
                 .enableExperimentalFeature("BuiltinModule"),
                 .enableExperimentalFeature("BorrowingSwitch"),
+                .enableExperimentalFeature("TypeWrappers"),
+                .enableExperimentalFeature("MoveOnlyTuples"),
+                .enableExperimentalFeature("LazyImmediate"),
                 .enableExperimentalFeature("DynamicActorIsolation"),
                 .enableExperimentalFeature("MoveOnlyPartialConsumption"),
                 .enableExperimentalFeature("OptionalIsolatedParameters"),
                 .enableExperimentalFeature("ClosureIsolation"),
-                .enableUpcomingFeature("InferSendableFromCaptures"),
                 .enableExperimentalFeature("GlobalActorIsolatedTypesUsability"),
-                .enableExperimentalFeature("AccessLevelOnImport"),
-                .enableUpcomingFeature("InternalImportsByDefault"),
+                //.enableExperimentalFeature("AccessLevelOnImport"),
+                //.enableUpcomingFeature("InternalImportsByDefault")
                 .define("SWIFTSETTINGS"),
                 .define("TEST_DIAGNOSTICS"),
                 .unsafeFlags(
                     [
                         "-DEXAMPLESETTINGS",
                         "-I", tryGuessSwiftLibRoot(),
-                        "-Xfrontend", "-disable-availability-checking",
-                        // "-continue-building-after-errors",
-                        // "-cross-module-optimization",
-                         "-wmo",
-                        "-Xfrontend", "-disable-round-trip-debug-types",
+                        //"-Xfrontend", "-disable-availability-checking",
+                        //"-continue-building-after-errors",
+                        //"-cross-module-optimization",
+                        //"-wmo",
+                        //"-Xfrontend", "-disable-round-trip-debug-types",
                     ]),
             ]
         ),
@@ -273,6 +302,7 @@ let package = Package(
             swiftSettings: [
                 .unsafeFlags([
                     "-Xfrontend", "-enable-private-imports",
+                    //"-enable-library-evolution"
                 ])
             ]
         ),
@@ -293,6 +323,7 @@ let package = Package(
                     "-module-name", "SwiftLib",
                     "-emit-clang-header-path", "./CXX/include/SwiftLib-Swift.h",
                     "-I", tryGuessSwiftLibRoot(),
+                    //"-Xswiftc='lto=llvm-thin'"
                 ]),
             ]
         ),
@@ -317,6 +348,8 @@ let package = Package(
                     "-I", tryGuessSwiftLibRoot(),
                 ])
             ]),
+            
+        .target(name: "AtomicShims", path: "AtomicShims"),
 
         .target(
             name: "CXX_Thread",
@@ -324,7 +357,7 @@ let package = Package(
             cxxSettings: [
                 .unsafeFlags([
                     "-I", tryGuessSwiftLibRoot(),
-                    "-O3"
+                    "-O3",
                 ])
             ]),
 
@@ -332,13 +365,17 @@ let package = Package(
         .testTarget(
             name: "TestExample",
             dependencies: [
-                .product(name: "Testing", package: "swift-testing")
+                .product(name: "Testing", package: "swift-testing"),
+                //"swiftEx"
+                //""
             ], path: "tests",
             swiftSettings: [
                 .unsafeFlags([
-                    "-Xfrontend", "--enable-experimental-swift-testing"
+                    // "-Xfrontend", "--enable-experimental-swift-testing", //not swift 6
+                    "-I", tryGuessSwiftLibRoot()
                 ])
             ]),
     ],
+    cLanguageStandard: .c2x,
     cxxLanguageStandard: .cxx2b
 )

@@ -2,14 +2,19 @@ import CXX_Thread
 internal import CustomExecutor
 import Foundation
 @_exported import Interface
-// import Observation
 import SwiftLib
 import SwiftWithCXX
 import _Differentiation
 import cxxLibrary
 
+#if canImport(Observation) && os(macOS)
+    import Observation
+#endif
+
 @_used nonisolated(unsafe) var usedVar: Int = 1
 @_section("__TEXT,__mysection") nonisolated(unsafe) var sectionVar: Int = 2
+
+_const let onlyConst: Int = 0
 
 internal final class UniqueThread: Thread {
 
@@ -75,7 +80,7 @@ where
 }
 
 struct Perceptron: Differentiable {
-    var weight: SIMD2<Float> = .random(in: -1 ..< 1)
+    var weight: SIMD2<Float> = .random(in: -1..<1)
     var bias: Float = 0
 
     @differentiable(reverse)
@@ -142,16 +147,23 @@ func jo() {
 @_marker
 protocol Send {}
 
+/*
+    warning: extension declares a conformance of imported type 'cxx_impl_exception' to imported protocol 'SwiftProtocol';
+    this will not behave correctly if the owners of 'cxxLibrary' introduce this conformance in the future
+    // solution
+*/
+extension cxxLibrary.cxx_impl_exception: SwiftLib.SwiftProtocol {}
+
 func exFunctype() {
     let _:
         @convention(thin) (  //@convention(thick) () -> (),
             @convention(thin) () -> Void,
             @convention(c) () -> Void,
-            @convention(c,cType:"intptr_t (*)(size_t)") (Int) -> Int,
-            @convention(block) () -> Void
-                //@convention(method) () -> (),
-                //@convention(objc_method) () -> (),
-                //@convention(witness_method: Bendable) (Fork) -> ()) -> ()
+            @convention(c,cType:"intptr_t (*)(size_t)") (Int) -> Int
+            //@convention(block) () -> Void,
+            //@convention(method) () -> Void,
+            //@convention(objc_method) () -> Void,
+            //@convention(witness_method:Bendable) (Int) -> () -> Void
         ) -> Void
 }
 
@@ -167,9 +179,23 @@ func exFunctype() {
 
 struct V<each T> {}
 
-//struct NoncopyableGen<T: _Copyable>: ~Copyable {}
+func useV() {
+    let v: V<> = V< >()  // : V<>
 
-//struct NoncopyableGen<T>: ~Copyable where T: _Copyable {}
+    print(v, type(of: v))
+}
+
+func useThen() {
+    let resultInt: Int = if Bool.random() {
+        print("Then statement")
+        then 0
+    } else {
+        print("Then")
+        then 1
+    }
+
+    print(resultInt)
+}
 
 extension Int: Send {}
 
@@ -180,6 +206,9 @@ struct NonCopyWithGen<T>: ~Copyable {
         print("Dynamically called this with \(withArguments)")
     }
 }
+
+// Generic struct 'NonCopyWithGen' required to be 'Copyable' but is marked with '~Copyable'
+// extension NonCopyWithGen: Copyable where T: Copyable {}
 
 @dynamicCallable
 struct CopyWithGen<T>: Copyable {
@@ -229,7 +258,6 @@ func forValueType<T: BitwiseCopyable>(value: T) {
 }
 
 extension Int: BitwiseCopyable {}
-//extension ThreadPool : _BitwiseCopyable {}
 
 class SingleBox<Boxed> {
     var boxed: Boxed
@@ -296,7 +324,6 @@ func example<each T>(_ pack: repeat each T, tuple_pack: (repeat each T)) {
             print(l, r)
         }
     #endif
-    //Not yet
 
     print("pack and tuple_pack", (repeat (each pack, each tuple_pack)))
     print("tuple_pack and pack", (repeat (each tuple_pack, each pack)))
@@ -343,53 +370,61 @@ func hasPadding<T>(_ value: T) -> Bool {
 func sizeOfAllFields(_ value: Any) -> Int {
     let m = Mirror(reflecting: value)
     switch m.displayStyle {
-        case .none:
-            switch value {
-                case is Int8: return 1
-                case is Int16: return 2
-                case is Int32: return 4
-                case is Int64: return 8
-                case is Int: return MemoryLayout<Int>.size
-                case is UInt8: return 1
-                case is UInt16: return 2
-                case is UInt32: return 4
-                case is UInt64: return 8
-                case is UInt: return MemoryLayout<UInt>.size
-                case is Float: return MemoryLayout<Float>.size
-                case is Double: return MemoryLayout<Double>.size
-                default: fatalError("TODO")
+    case .none:
+        switch value {
+        case is Int8: return 1
+        case is Int16: return 2
+        case is Int32: return 4
+        case is Int64: return 8
+        case is Int: return MemoryLayout<Int>.size
+        case is UInt8: return 1
+        case is UInt16: return 2
+        case is UInt32: return 4
+        case is UInt64: return 8
+        case is UInt: return MemoryLayout<UInt>.size
+        case is Float: return MemoryLayout<Float>.size
+        case is Double: return MemoryLayout<Double>.size
+        default: fatalError("TODO")
+        }
+    case let .some(wrapped):
+        switch wrapped {
+        case .struct:
+            return m.children.reduce(0) {
+                $0 + sizeOfAllFields($1.value)
             }
-        case let .some(wrapped):
-            switch wrapped {
-                case .struct:
-                    return m.children.reduce(0) {
-                        $0 + sizeOfAllFields($1.value)
-                    }
-                case .class:
-                    fatalError("TODO")
-                case .enum:
-                    fatalError("TODO")
-                case .tuple:
-                    return m.children.reduce(0) {
-                        $0 + sizeOfAllFields($1.value)
-                    }
-                case .optional:
-                    // value is Any here
-                    let v = value as Any?
-                    if let v {
-                        return sizeOfAllFields(v)  // WRONG
-                    } else {
-                        return MemoryLayout.size(ofValue: v)  // WRONG!
-                    }
-                case .collection:
-                    fatalError("TODO")
-                case .dictionary:
-                    fatalError("TODO")
-                case .set:
-                    fatalError("TODO")
-                @unknown default:
-                    fatalError("TODO")
+        case .class:
+            fatalError("TODO")
+        case .enum:
+            fatalError("TODO")
+        case .tuple:
+            return m.children.reduce(0) {
+                $0 + sizeOfAllFields($1.value)
             }
+        case .optional:
+            // value is Any here
+            let v = value as Any?
+            if let v {
+                return sizeOfAllFields(v)  // WRONG
+            } else {
+                return MemoryLayout.size(ofValue: v)  // WRONG!
+            }
+        case .collection:
+            fatalError("TODO")
+        case .dictionary:
+            fatalError("TODO")
+        case .set:
+            fatalError("TODO")
+        @unknown default:
+            fatalError("TODO")
+        }
+    }
+}
+
+extension FutexLock {
+    func locked<T>(@_implicitSelfCapture _ block: () throws -> T) rethrows -> T {
+        self.lock()
+        defer { self.unlock() }
+        return try block()
     }
 }
 
@@ -458,7 +493,86 @@ func sizeOfAllFields(_ value: Any) -> Int {
         } */
     } */
 
-//@typeWrapper
+#if $TypeWrappers && compiler(<5.9)
+    @typeWrapper
+    struct Wrapper<W, S> {
+        var underlying: S
+        init(for wrappedType: W.Type, storage: S) {
+            underlying = storage
+        }
+        subscript<V>(propertyKeyPath propertyPath: KeyPath<W, V>, storageKeyPath storagePath: KeyPath<S, V>) -> V {
+            underlying[keyPath: storagePath]
+        }
+        subscript<V>(propertyKeyPath propertyPath: WritableKeyPath<W, V>, storageKeyPath storagePath: WritableKeyPath<S, V>) -> V {
+            underlying[keyPath: storagePath]
+        }
+    }
+
+    @Wrapper
+    struct TypeWithLetProperties<T> {
+        var val: T?
+        init(cond: Bool = true, initialValue: T? = nil) {
+            if cond {
+                if let initialValue = initialValue {
+                    self.val = initialValue
+                } else {
+                    self.val = nil
+                }
+            } else {
+                self.val = nil
+            }
+        }
+    }
+#endif
+
+// https://antonz.org/uuidv7/
+extension UUID {
+    static func v7() -> Self {
+        // random bytes
+        var value = (
+            UInt8(0),
+            UInt8(0),
+            UInt8(0),
+            UInt8(0),
+            UInt8(0),
+            UInt8(0),
+            UInt8.random(in: 0...255),
+            UInt8.random(in: 0...255),
+            UInt8.random(in: 0...255),
+            UInt8.random(in: 0...255),
+            UInt8.random(in: 0...255),
+            UInt8.random(in: 0...255),
+            UInt8.random(in: 0...255),
+            UInt8.random(in: 0...255),
+            UInt8.random(in: 0...255),
+            UInt8.random(in: 0...255)
+        )
+
+        // current timestamp in ms
+        let timestamp: Int = .init(Date().timeIntervalSince1970 * 1000)
+
+        // timestamp
+        value.0 = .init((timestamp >> 40) & 0xFF)
+        value.1 = .init((timestamp >> 32) & 0xFF)
+        value.2 = .init((timestamp >> 24) & 0xFF)
+        value.3 = .init((timestamp >> 16) & 0xFF)
+        value.4 = .init((timestamp >> 8) & 0xFF)
+        value.5 = .init(timestamp & 0xFF)
+
+        // version and variant
+        value.6 = (value.6 & 0x0F) | 0x70
+        value.8 = (value.8 & 0x3F) | 0x80
+
+        return UUID(uuid: value)
+    }
+}
+
+typealias NonCopyableTuplePair<T: ~Copyable, V: ~Copyable> = (T, V)
+
+/* extension Int {
+    public var value: Int { self }
+} */
+
 @propertyWrapper
 @dynamicMemberLookup
 struct CoW<T> {
@@ -506,8 +620,8 @@ func downcast<T: AnyObject>(_ obj: AnyObject, to type: T.Type) -> T {
 
 //
 
-//@Observable
-class Ex: CustomStringConvertible {
+// @Observable
+class Ex: CustomStringConvertible, @unchecked Sendable {
     var age: UInt = 0
     var name: String = ""
 
@@ -545,88 +659,6 @@ struct PersonDetail: CustomStringConvertible {
     @CoW var details: Ex = Ex(age: 18, name: "Ada")
 }
 
-#if hasFeature(BodyMacros) || $BodyMacros || hasFeature(PreambleMacros)
-    // <unknown>:0: error: circular reference
-    // <unknown>:0: note: through reference here
-    // swift 6.0
-    @Remote
-    func f(a: Int, b: String) async throws -> String {
-        print("\(a), \(b)")
-        return b
-    }
-
-    @Traced
-    // <unknown>:0: error: circular reference
-    // <unknown>:0: note: through reference here
-    // swift 6.0
-    func aboutToTrace() {
-        print(#function)
-    }
-#endif
-
-#if hasFeature(CodeItemMacros)
-    func codeItem(a: Int?, b: Int?) {
-        #unwrap
-    }
-
-#endif
-
-@DTO
-public struct DTOStruct {
-    private struct Blueprint {
-        var id: UUID
-        var createdAt: Date
-        var title: String
-        var description: String
-        var items: [Int]
-    }
-}
-
-#if os(macOS)
-    func confirm() {
-        _ = withObservationTracking {
-            details.age
-        } onChange: {
-            DispatchQueue.main.async {
-                print("Name changed \(details.name)")
-                confirm()
-            }
-        }
-    }
-
-    func observationStream<T>(applying: @escaping () -> T) -> AsyncStream<T> {
-        AsyncStream { cont in
-            @Sendable func observe() {
-                let result = withObservationTracking {
-                    applying()
-                } onChange: {
-                    DispatchQueue.main.async {
-                        observe()
-                    }
-                }
-                cont.yield(result)
-            }
-            observe()
-        }
-    }
-
-/*  let changes = observationStream {
-        details.age
-    }
-
-    Task {
-        for await age in changes {
-            print("Details age \(age)")
-        }
-    }
-
-    confirm()
-
-    for _ in 0..<5 {
-        details.name = "\(Int.random(in:10000...200000))"
-    }
-     */
-#endif
 
 extension DispatchQueue: @retroactive SerialExecutor, @unchecked @retroactive Sendable {
     public func enqueue(_ job: consuming ExecutorJob) {
@@ -645,45 +677,45 @@ extension DispatchQueue: @retroactive SerialExecutor, @unchecked @retroactive Se
 
 func playWith() {
     var list: List<String> = .init()
-        list.push("one")
-        list.push("two")
+    list.push("one")
+    list.push("two")
 
-        var listlist: List<List<String>> = .init()
-        listlist.push(list)
-        // list.push("three")  // now forbidden, list was consumed
-        list = listlist.pop()!  // but if we move it back out...
-        list.push("three")  // this is allowed again
+    var listlist: List<List<String>> = .init()
+    listlist.push(list)
+    // list.push("three")  // now forbidden, list was consumed
+    list = listlist.pop()!  // but if we move it back out...
+    list.push("three")  // this is allowed again
 
-        list.forEach { element in
-            print(element, terminator: ", ")
-        }
-        // prints "three, two, one, "
-        print()
-        while let element = list.pop() {
-            print(element, terminator: ", ")
-        }
-        // prints "three, two, one, "
-        print()
+    list.forEach { element in
+        print(element, terminator: ", ")
+    }
+    // prints "three, two, one, "
+    print()
+    while let element = list.pop() {
+        print(element, terminator: ", ")
+    }
+    // prints "three, two, one, "
+    print()
 
         
 
-        var nce = NonCopyableEnum.one  // must be var not let else compiler crashes
-        switch consume nce {
+    var nce = NonCopyableEnum.one  // must be var not let else compiler crashes
+    switch consume nce {
+        case .one: ()
+        case .two: ()
+        case .three(let y): y.consumingfunc()
+    }
+
+    nce = .two
+
+    #if $BorrowingSwitch || hasFeature(BorrowingSwitch)
+        let nc = NonCopyEnum.one
+        switch /* _borrowing */ nc {
             case .one: ()
             case .two: ()
-            case .three(let y): y.consumingfunc()
+            case .three(let borrowing y): y.borrowingfunc()
         }
-
-        nce = .two
-
-        #if $BorrowingSwitch || hasFeature(BorrowingSwitch)
-            let nc = NonCopyEnum.one
-            switch /* _borrowing */ nc {
-                case .one: ()
-                case .two: ()
-                case .three(let borrowing y): y.borrowingfunc()
-            }
-        #endif
+    #endif
 }
 
 func playWithCopy() {
@@ -708,7 +740,7 @@ func playWithCopy() {
         print(element.description, terminator: ", ")
     }
     // prints "three, two, one, "
-    print()     
+    print()
 
 }
 
@@ -815,13 +847,11 @@ nonisolated func closure(_ c: () async throws -> Void) async rethrows {
     let thread = CXX_Thread.create {
         print(Thread.current.name as Any)
         print("Help")
-        Thread.sleep(forTimeInterval: 0.18)
         print("Thread ended")
     }
     thread.swap_with {
         print(Thread.current.name as Any)
         print("Help swap")
-        Thread.sleep(forTimeInterval: 0.10)
         print("SWAP ENDED")
     }
     thread.yield()
@@ -872,15 +902,20 @@ func dou() {
 }
 
 @_lexicalLifetimes
-func lexy(_ c: String) {}
+func lexy(_ c: String) {
+    print("@_lexicalLifetimes func with \(c)")
+}
 
-func noInout<S>(@_nonEphemeral at pointer: UnsafeMutablePointer<S>) {}
+func noInout<S>(@_nonEphemeral at pointer: UnsafeMutablePointer<S>) {
+    let sValue: S = pointer.move()
+    print("Got \(sValue) for @_nonEphemeral pointer")
+}
 
-@_originallyDefinedIn(module:"foo",OSX 13.13)
+@_originallyDefinedIn(module:"foo", OSX 13.13)
 @_optimize(none)
 public func foo1() {}
 
-@_specialize(where T:_BridgeObject)
+@_specialize(where T: _BridgeObject)
 func foo<T>(_ t: T) {}
 
 // public typealias Body = @_opaqueReturnTypeOf("Send", 0) __
@@ -918,15 +953,22 @@ struct NotEagerlyMove {}
 @extractConstantsFromMembers
 protocol ConstantsFromMembers {}
 
-@Sendable func sendableFunc(_: Sendable...) {}
+@Sendable func sendableFunc(_: Sendable...) {
+    print("Sendable variadic argument")
+}
 
 struct ConstantStruct: ConstantsFromMembers {
-    let foo = "foo"
+    let foo: String = "foo"
     let cane: [String] = ["bar", "baz"]
 }
 
+@available(OpenBSD, unavailable, message: "malloc_size is unavailable.")
+@available(Windows, unavailable)
+//@available(Linux, unavailable)
+struct UnavailBSDWin {}
+
 struct MoveOnly: ~Copyable {
-    var name = "MoveOnly"
+    var name: String = "MoveOnly"
     deinit {
         print("Deinit \(name)")
     }
@@ -935,13 +977,13 @@ struct MoveOnly: ~Copyable {
 func play() {
 
     @_noImplicitCopy  // same as consume
-    let str = ""
+    let str: String = ""
 
-    let new_str = copy str  // without copy compiler error
+    let new_str: String = copy str  // without copy compiler error
 
     print(new_str)
-    let moveInstance = Moved()
-    let anotherInstance = MoveOnly()
+    let moveInstance: Moved = Moved()
+    let anotherInstance: MoveOnly = MoveOnly()
 
     borrower(moveInstance)
     borrower(anotherInstance)
@@ -999,8 +1041,8 @@ struct Person {
 @_fixed_layout
 @usableFromInline
 class ExPerson {
-    var name = "Adam"
-    var age = 0
+    var name: String = "Adam"
+    var age: Int = 0
 }
 
 func takeOnlyConst(_: _const Int) {}
@@ -1043,9 +1085,9 @@ extension Mover: Moving {
 }
 
 func play_withMove() {
-    var mv_ = Mover(value: 32)
+    var mv_: Mover = Mover(value: 32)
 
-    var move_ = NonCopyableType(32)
+    var move_: NonCopyableType = NonCopyableType(32)
 
     // _ = move_ // consume here
 
@@ -1078,56 +1120,15 @@ func play_withMove() {
     //_ = consume mv_
 }
 
-/* */
+fileprivate func o(mv: borrowing MoveOnlyType) {}
 
-/* typealias ElementType = Int32
-typealias ArrayType = [ElementType]
-
-let element: ElementType = 0x1122_3344
-let headerSize = 32
-
-func isStackMemory(_ ptr: UnsafeRawPointer) -> Bool {
-    let stackBase = pthread_get_stackaddr_np(pthread_self())
-    let stackSize = pthread_get_stacksize_np(pthread_self())
-    return ptr <= stackBase && ptr >= stackBase - stackSize
-}
-
-enum MemoryType: String {
-
-    case stack = "on stack"
-    case heap = "on heap"
-    case other = "other memory (global?)"
-
-    init(_ ptr: UnsafeRawPointer) {
-        if isStackMemory(ptr) {
-            self = .stack
-        } else {
-            self = .other
-        }
+func cxx_move() {
+    do {
+        let moveOnly: MoveOnlyType = MoveOnlyType(9)
+        o(mv: moveOnly)
+        let new: MoveOnlyType = moveOnly
+        print(new.value)
+        new.borrow_this()
+        new.consume_this()
     }
 }
-
-func dumpHex(_ title: String, _ ptr: UnsafeRawPointer, _ size: Int, _ headerSize: Int = 0) {
-    var size = size
-    var ptr = ptr
-    let mallocSize = malloc_size(ptr - headerSize)
-    if mallocSize != 0 {
-        let mallocBlock = ptr - headerSize
-        print(
-            "\(title), \(mallocBlock) + \(headerSize) = \(ptr) (\(MemoryType.heap.rawValue)), size: \(headerSize) + \(mallocSize - headerSize) = \(mallocSize) -> "
-        )
-        size = mallocSize
-        ptr = mallocBlock
-    } else {
-        print("\(title), \(ptr) (\(MemoryType(ptr).rawValue)), showing size: \(size) -> ")
-    }
-    let v = ptr.assumingMemoryBound(to: UInt8.self)
-    for index in 0 ..< size {
-        if index != 0 && (index % 32) == 0 {
-            print()
-        }
-        print(String(format: "%02x ", v[index]), terminator: "")
-    }
-    print()
-}
- */

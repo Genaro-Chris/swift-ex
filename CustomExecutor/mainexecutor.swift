@@ -1,4 +1,4 @@
-import CXX_Thread
+public import CXX_Thread
 
 public final class MainExecutor: SerialExecutor, @unchecked Sendable {
 
@@ -8,9 +8,10 @@ public final class MainExecutor: SerialExecutor, @unchecked Sendable {
 
     public init() {
         jobQueue = JobQueue()
+        threadHandle = SingleThread.create()
     }
 
-    private let threadHandle = SingleThread.create()
+    private let threadHandle: SingleThread
 
     public func enqueue(_ job: consuming ExecutorJob) {
         jobQueue <- UnownedJob(job)
